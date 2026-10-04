@@ -1,0 +1,93 @@
+'use strict';
+(() => {
+  let group='drinks', drink='all', offerPage=1, version=0, timer, signature='', data=null;
+  window.offerMode='offers';
+  const sizeLabel=r=>{
+    const units={ml:'мл',cl:'сл',l:'л',liter:'л',g:'г',kg:'кг'};
+    const pack=r.size.match(/(\d+)\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*(ml|cl|liter|l|kg|g)\b/i);
+    if(pack)return pack[1]+' × '+pack[2].replace('.',',')+' '+units[pack[3].toLowerCase()];
+    const num=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:3}).format(n);
+    return r.amount?(r.measure==='kg'&&r.amount<1?num(r.amount*1000)+' г':num(r.amount)+' '+(r.measure==='l'?'л':'кг')):r.size;
+  };
+  const unitLabel=r=>r.unit_price!==null?euros(r.unit_price)+' / '+(r.measure==='l'?'л':'кг'):'';
+  function row(r) {
+    const el=node('article','offer-row');
+    const info=node('div','offer-info');
+    const top=node('div','offer-row-top');top.append(node('span','store-badge symbol-'+r.store,names[r.store]),node('span','offer-period',shortDate(r.valid_from)+' — '+shortDate(r.valid_to)));
+    info.append(top,node('h2','offer-name',r.name),node('div','offer-size',sizeLabel(r)+' · '+(r.loose_weight?'весовой товар':r.min_quantity>1?'нужно '+r.min_quantity+' уп.':'можно купить 1 уп.')));
+    const source=externalLink('Флюгблатт · стр. '+r.page+' ↗',r.source_url,'offer-source');
+    source.title='Страница '+r.page+' в PDF; нумерация печатного буклета может отличаться';
+    const detail=node('details','offer-details');detail.append(node('summary','','Условия и источник'));
+    detail.append(node('p','',r.size));
+    if(r.promo_original)detail.append(node('p','',r.promo_original));
+    if(r.store==='billa')detail.append(node('p','','Акции BILLA не действуют по воскресеньям и в праздничные дни.'));
+    if(r.deposit_note)detail.append(node('p','','Залог за тару: '+r.deposit_note));
+    detail.append(node('p','','Проверено '+timeLabel(r.checked_at)),source);info.append(detail);
+    const terms=node('div','offer-terms');terms.append(node('span','offer-deal'+(r.min_quantity>1?' bulk':''),r.deal));
+    if(r.membership_required)terms.append(node('span','offer-card-required','Нужна '+r.membership_label));
+    else terms.append(node('span','offer-no-card','Без карты магазина'));
+    if(r.min_quantity>1)terms.append(node('span','offer-total','≈ '+euros(r.total_cents/100)+' за '+r.min_quantity+' уп.'));
+    const price=node('div','offer-price');price.append(node('strong','',euros(r.price_cents/100)),node('span','','за '+sizeLabel(r)),node('b','offer-unit',unitLabel(r)));
+    el.append(info,terms,price);return el;
+  }
+  function chips(container, groups, selectedId, action) {
+    const list=$(container);
+    for(const g of groups) {
+      let b=list.querySelector('[data-value="'+g.id+'"]');
+      if(!b){b=node('button','category-tab');b.dataset.value=g.id;list.append(b);}
+      b.classList.toggle('selected',g.id===selectedId);b.setAttribute('aria-pressed',String(g.id===selectedId));
+      b.replaceChildren(node('span','',g.label),node('span','category-count',count(g.count)));b.onclick=()=>action(g.id);
+    }
+  }
+  function render(d) {
+    data=d;offerPage=d.page;
+    window.offerSummary={total:d.all_total,stores:d.stores};
+    $('flyers-tab-count').textContent=count(d.all_total);
+    chips('offer-categories',d.categories,group,id=>{group=id;drink='all';offerPage=1;load();});
+    chips('offer-drinks',d.drinks,drink,id=>{drink=id;offerPage=1;load();});
+    $('offer-drinks').classList.toggle('hidden',group!=='drinks');
+    const successful=d.stores.filter(s=>s.checked_at&&s.count);
+    const scope=d.stores.filter(s=>selected==='all'||s.store===selected);
+    const available=successful.map(s=>s.name).join(', ');
+    $('offer-coverage').textContent=d.busy?'Обновляем буклеты и читаем товары. Это может занять несколько минут.':
+      'Часть предложений из буклетов: '+(available||'пока нет прочитанных товаров')+'. Полный охват всех пяти магазинов пока недоступен.';
+    const stale=scope.some(s=>s.checked_at&&Date.now()-new Date(s.checked_at).getTime()>86400000);
+    if(stale)$('offer-coverage').append(node('span','stale',' Цены проверялись больше суток назад — обновите акции.'));
+    const best=$('offer-best');best.replaceChildren();best.classList.toggle('hidden',!d.best);
+    if(d.best){const r=d.best;const text=node('div');text.append(node('span','best-kicker','НИЖЕ ЦЕНА ЗА ЛИТР СРЕДИ НАЙДЕННЫХ'),node('strong','',names[r.store]+' · '+r.name),node('span','',
+      euros(r.price_cents/100)+' за '+sizeLabel(r)+(r.min_quantity>1?' при покупке '+r.min_quantity+' уп.':'')+(r.membership_required?' · нужна '+r.membership_label:' · без карты')));
+      best.append(text,node('strong','best-price',unitLabel(r)));
+    }
+    $('offer-list').replaceChildren(...d.items.map(row));$('offer-empty').classList.toggle('hidden',d.total>0);
+    $('offer-count').textContent='Найдено предложений: '+count(d.total);
+    $('offer-page-info').textContent=d.total?'Страница '+d.page+' из '+d.pages:'Нет результатов';
+    $('offer-prev').disabled=d.page<=1;$('offer-next').disabled=d.page>=d.pages;
+    $('offer-sources').replaceChildren(...d.stores.map(s=>{
+      const el=node('div','flyer-source-row');const info=node('div');
+      info.append(node('div','',s.status==='running'?'Читаем PDF…':s.count?'Доступно сегодня: '+s.count+' · прочитана часть буклета':'Товары пока недоступны'));
+      if(s.checked_at)info.append(node('p','source-desc','Последнее чтение '+timeLabel(s.checked_at)));
+      if(s.error)info.append(node('p','source-desc',s.error));
+      if(s.omitted)info.append(node('p','source-desc','Сложные блоки с ценами пропущены: '+s.omitted+'. Их можно посмотреть в оригинале.'));
+      el.append(node('strong','',s.name),info);return el;
+    }));
+    if(lastState)renderStores(lastState);
+  }
+  async function load(reset=false) {
+    if(reset)offerPage=1;
+    const current=++version;
+    const params=new URLSearchParams({store:selected,category:group,drink,q:$('offer-search').value,membership:$('offer-member').value,quantity:$('offer-quantity').value,sort:$('offer-sort').value,page:String(offerPage)});
+    try {const result=await json('/api/offers?'+params);if(current!==version)return;const next=JSON.stringify(result)+params;
+      if(next!==signature){signature=next;render(result);}
+    } catch(e){$('offer-coverage').textContent=e.message;}
+  }
+  window.loadOffers=load;
+  for(const mode of ['offers','books'])$(mode+'-mode').onclick=()=>{
+    window.offerMode=mode;for(const id of ['offers','books']){$(id+'-view').classList.toggle('hidden',id!==mode);$(id+'-mode').classList.toggle('selected',id===mode);$(id+'-mode').setAttribute('aria-pressed',String(id===mode));}
+    if(lastState)renderStores(lastState);
+  };
+  $('offer-search').oninput=()=>{clearTimeout(timer);group='all';drink='all';timer=setTimeout(()=>load(true),250);};
+  for(const id of ['offer-member','offer-quantity','offer-sort'])$(id).onchange=()=>load(true);
+  $('offer-reset').onclick=()=>{group='all';drink='all';$('offer-search').value='';$('offer-member').value='all';$('offer-quantity').value='0';load(true);};
+  $('offer-prev').onclick=()=>{offerPage--;load();};$('offer-next').onclick=()=>{offerPage++;load();};
+  load();
+})();

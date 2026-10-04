@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ценник — каталог магазинов Вены</title>
+  <meta name="description" content="Товары и цены из открытых каталогов SPAR, BILLA, HOFER, PENNY и Lidl Österreich.">
+  <link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+  <script src="/offers.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Ценник, главная"><span class="brand-icon">€</span>ценник<span class="brand-dot">.</span></a>
+    <span class="place"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>Вена, Австрия</span>
+    <span class="stage">Цены и акции</span>
+  </header>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="nav-title">МАГАЗИНЫ</div>
+      <nav id="stores" aria-label="Магазины"><button class="store selected" data-store="all"><span class="store-symbol all-symbol">▦</span><span>Все магазины</span><span class="count">—</span></button></nav>
+      <div class="sidebar-note"><span class="tiny-label">ЧТО В КАТАЛОГЕ</span><p>Товары, которые магазины публикуют на своих сайтах.</p><p>Ассортимент и цены конкретного филиала могут отличаться.</p></div>
+      <div class="sidebar-bottom">SPAR · BILLA · HOFER<br>PENNY · Lidl</div>
+    </aside>
+    <main>
+      <nav class="view-tabs" role="tablist" aria-label="Разделы">
+        <button id="catalog-tab" class="view-tab selected" role="tab" aria-selected="true" aria-controls="catalog-view">Каталог товаров</button>
+        <button id="selections-tab" class="view-tab" role="tab" aria-selected="false" aria-controls="catalog-view" tabindex="-1">Выбранные продукты</button>
+        <button id="flyers-tab" class="view-tab" role="tab" aria-selected="false" aria-controls="flyers-view" tabindex="-1">Акции <span class="tab-caption">Flugblatt</span><span class="tab-count" id="flyers-tab-count">—</span></button>
+      </nav>
+      <div id="catalog-view" role="tabpanel" aria-labelledby="catalog-tab">
+      <div class="heading">
+        <div><div class="eyebrow">ПРОДУКТЫ И ТОВАРЫ ДЛЯ ДОМА</div><h1 id="title">Каталог товаров</h1><p class="subtitle" id="subtitle">Цены с официальных сайтов магазинов</p></div>
+        <button class="primary" id="refresh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6.1 7a7 7 0 0 1 11.6-2L20 8M4 16l2.3 3A7 7 0 0 0 18 17"/></svg><span>Считать цены</span></button>
+      </div>
+      <div id="message" class="message hidden" role="status"></div>
+      <section class="overview" aria-label="Состояние каталога">
+        <div><span class="metric" id="total">—</span><span class="metric-label">товаров с ценой</span></div>
+        <div><span class="metric" id="today-total">—</span><span class="metric-label">без истёкшего срока</span></div>
+        <div class="update-info"><span class="status-label" id="sync-label">Проверяем каталог…</span><button class="text-button" id="sources-toggle" aria-expanded="false" aria-controls="sources-panel">Состояние источников</button></div>
+      </section>
+      <section id="sources-panel" class="sources-panel hidden" aria-label="Источники данных"></section>
+      <section class="catalog" aria-label="Товары">
+        <div id="selections-panel" class="hidden">
+          <nav id="selections-list" class="selections-list" aria-label="Подборки продуктов"></nav>
+          <p class="selection-note">Последние загруженные цены на сегодня. Дата проверки — рядом с каждым товаром; для повторной проверки нажмите «Обновить цены».</p>
+        </div>
+        <nav id="categories" class="categories" aria-label="Категории товаров"><button class="category-tab selected" data-category="all" aria-pressed="true">Все товары</button></nav>
+        <section id="product-facets" class="product-facets hidden" aria-label="Уточнить продукты">
+          <div class="facet-heading"><strong id="facet-title">Уточнить продукты</strong><span>Можно сочетать несколько фильтров</span></div>
+          <div id="facet-fields" class="facet-fields"></div>
+          <p class="facet-note">Признаки взяты из названий и разделов магазина. «Без отметки Laktosefrei» означает, что безлактозность не указана.</p>
+        </section>
+        <div class="toolbar">
+          <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input id="search" type="search" placeholder="Название товара, например Milch" aria-label="Поиск по названию товара" autocomplete="off"></label>
+          <label class="filter"><span class="sr-only">Срок действия цены</span><select id="period"><option value="current">На сегодня</option><option value="all">Все опубликованные</option><option value="future">Будущие предложения</option><option value="expired">Срок закончился</option></select></label>
+          <label class="filter"><span class="sr-only">Сортировка</span><select id="sort"><option value="name">По названию</option><option value="price_asc">Сначала дешевле</option><option value="price_desc">Сначала дороже</option><option value="updated">Недавно проверенные</option></select></label>
+        </div>
+        <div class="quantity-filters">
+          <label class="facet-field"><span>Как сравнивать цену</span><select id="price-basis" aria-describedby="quantity-hint"><option value="pack">За упаковку / указанное количество</option><option value="kg">За 1 кг</option><option value="l">За 1 л</option></select></label>
+          <label class="facet-field"><span>Вес / объём упаковки</span><select id="package-size"><option value="all">Любой вес / объём</option></select></label>
+          <p class="quantity-hint" id="quantity-hint">Можно сравнить цену за кг или литр. Весовые товары отделены от упаковок фиксированного веса.</p>
+          <button class="secondary compare-toggle" id="compare-stores" aria-expanded="false" aria-controls="store-comparison">Сравнить магазины</button>
+        </div>
+        <div class="discount-filter"><label><input id="discount-only" type="checkbox" aria-describedby="discount-hint">Только товары со скидкой</label><span id="discount-hint">Включая скидки по карте и при покупке нескольких упаковок</span></div>
+        <section id="store-comparison" class="store-comparison hidden" aria-label="Сравнение магазинов">
+          <div class="comparison-heading"><div><h2>Сравнение магазинов</h2><p>Самое дешёвое подходящее предложение каждого магазина</p></div><label class="facet-field"><span>Сравнивать</span><select id="comparison-basis"><option value="kg">За 1 кг</option><option value="l">За 1 л</option></select></label></div>
+          <p class="comparison-note">Учитываем категорию, поиск, вес и скидки во всех пяти магазинах. Бренды и товары могут отличаться. Сравниваем основную цену; отдельные цены по карте показаны рядом.</p>
+          <p id="comparison-status" class="comparison-status" role="status" aria-live="polite"></p>
+          <div id="comparison-list" class="comparison-list"></div>
+        </section>
+        <div class="result-line"><span id="result-count" role="status" aria-live="polite">Загружаем товары…</span><button class="text-button hidden" id="reset-filters">Сбросить фильтры</button><span>Цены в евро · НДС включён</span></div>
+        <div class="table-wrap"><table><thead><tr><th>Товар</th><th>Магазин</th><th>Количество</th><th>Цена</th><th>Срок и проверка</th><th><span class="sr-only">Источник</span></th></tr></thead><tbody id="products"></tbody></table></div>
+        <div id="empty" class="empty hidden"><span class="empty-symbol">⌕</span><h2 id="empty-title">Товаров пока нет</h2><p id="empty-text">Нажмите «Считать цены», чтобы загрузить каталоги магазинов.</p><button class="secondary hidden" id="reset-search">Сбросить фильтры</button></div>
+        <div class="pagination"><span id="page-info"></span><div><button class="secondary" id="prev" disabled>Назад</button><button class="secondary" id="next" disabled>Далее</button></div></div>
+      </section>
+      <footer><p>Названия и условия сохранены как у магазина. Цена за упаковку, вес или количество указана рядом с товаром. Залог за тару (Pfand) показан отдельно, когда источник его передаёт.</p><p>«На сегодня» исключает будущие и завершённые предложения. Если магазин не указал срок, ориентируйтесь на дату проверки.</p></footer>
+      </div>
+      <div id="flyers-view" class="hidden" role="tabpanel" aria-labelledby="flyers-tab">
+        <div class="heading">
+          <div><div class="eyebrow">ПРЕДЛОЖЕНИЯ ИЗ FLUGBLATT</div><h1>Где купить выгоднее</h1><p class="subtitle">Выберите продукт и сравните цены с учётом условий акции</p></div>
+          <button class="primary" id="refresh-flyers"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6.1 7a7 7 0 0 1 11.6-2L20 8M4 16l2.3 3A7 7 0 0 0 18 17"/></svg><span>Обновить акции</span></button>
+        </div>
+        <div class="flyer-intro"><div><span class="live-dot" aria-hidden="true"></span><strong id="flyer-date">Действуют сегодня</strong><span id="flyer-count" role="status" aria-live="polite">Проверяем выпуски…</span></div></div>
+        <nav class="offer-modes" aria-label="Просмотр акций"><button id="offers-mode" class="selected" aria-pressed="true">Товары и цены</button><button id="books-mode" aria-pressed="false">Буклеты магазинов</button></nav>
+        <div id="flyer-message" class="message hidden" role="status"></div>
+        <section id="offers-view" aria-label="Товары из флюгблаттов">
+          <div id="offer-coverage" class="offer-coverage" role="status">Читаем предложения…</div>
+          <div class="catalog offer-catalog">
+            <nav id="offer-categories" class="categories" aria-label="Категории акций"></nav>
+            <div class="toolbar offer-toolbar">
+              <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input id="offer-search" type="search" placeholder="Кола, сок, сыр или название товара" aria-label="Поиск в флюгблаттах" autocomplete="off"></label>
+              <label class="filter"><span class="sr-only">Карта магазина</span><select id="offer-member"><option value="all">Все условия</option><option value="no">Без карты и купонов</option></select></label>
+              <label class="filter"><span class="sr-only">Максимальная минимальная покупка</span><select id="offer-quantity"><option value="0">Любое количество</option><option value="1">Только 1 упаковка</option><option value="2">Готов купить до 2</option><option value="4">Готов купить до 4</option><option value="6">Готов купить до 6</option><option value="12">Готов купить до 12</option><option value="24">Готов купить до 24</option></select></label>
+            </div>
+            <nav id="offer-drinks" class="offer-drinks" aria-label="Виды напитков"></nav>
+            <div id="offer-best" class="offer-best hidden"></div>
+            <div class="result-line offer-result"><span id="offer-count" role="status" aria-live="polite"></span><label>Порядок: <select id="offer-sort" aria-label="Сортировка акций"><option value="unit">Цена за л / кг</option><option value="price">Цена за упаковку</option><option value="name">Название</option></select></label></div>
+            <div id="offer-list" class="offer-list"></div>
+            <div id="offer-empty" class="empty hidden"><span class="empty-symbol">⌕</span><h2>Таких предложений пока нет</h2><p>Попробуйте другое название или снимите фильтры. Прочитана только часть товаров из буклетов.</p><button id="offer-reset" class="secondary">Сбросить фильтры</button></div>
+            <div class="pagination"><span id="offer-page-info"></span><div><button id="offer-prev" class="secondary">Назад</button><button id="offer-next" class="secondary">Далее</button></div></div>
+          </div>
+          <p class="offer-footnote">Сравниваем найденные предложения, а не весь ассортимент магазинов. Разные бренды и вкусы в одной группе могут отличаться. Сумма за несколько упаковок и цена за литр/кг рассчитаны по округлённой цене буклета; на кассе возможна разница в несколько центов. Залог Pfand не включён.</p>
+          <details class="flyer-sources"><summary>Какие товары удалось прочитать</summary><div id="offer-sources"></div></details>
+        </section>
+        <div id="books-view" class="hidden">
+        <section id="flyer-grid" class="flyer-grid" aria-label="Актуальные флюгблатты"></section>
+        <div id="flyer-empty" class="empty hidden"><span class="empty-symbol">▤</span><h2>Актуальных выпусков пока нет</h2><p>Обновите акции или откройте флюгблатт на официальном сайте ниже.</p></div>
+        </div>
+        <details class="flyer-sources"><summary>Проверка источников <span id="flyer-source-status"></span></summary><div id="flyer-sources-list"></div></details>
+        <footer><p>Срок на карточке относится ко всему выпуску. У отдельных товаров могут быть другие даты, условия покупки, ограничения по количеству или скидки по карте магазина.</p><p>Для SPAR и BILLA выбираем выпуски Вены. Для остальных магазинов показываем австрийские выпуски; предложения конкретного филиала могут отличаться. Будущие и завершённые выпуски здесь не показываются.</p></footer>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,4 @@
+{
+  "spar": ["https://flugblatt.spar.at/wien/spar/261001-1-flugblatt-kw-40/"],
+  "note": "Previously discovered on https://www.spar.at/aktionen on 2026-10-02. Used only when the index is unavailable. Validity is read from the reader on each check; this is not a rolling weekly URL template."
+}
