@@ -124,6 +124,17 @@ def initialize():
                        for row in db.execute('SELECT store,id,payload FROM products')]
             db.executemany('UPDATE products SET quantity=? WHERE store=? AND id=?',updates)
             db.execute("INSERT OR REPLACE INTO app_meta(key,value) VALUES ('quantity_version',?)",(str(QUANTITY_VERSION),))
+        # Bit masks with a bound parameter cannot use a partial index. Match
+        # these trusted, fixed predicates in products() so each query reads
+        # only its selection instead of scanning every product payload.
+        for entry in SELECTIONS:
+            flag = int(entry['flag'])
+            db.execute(f'''CREATE INDEX IF NOT EXISTS product_selection_{flag}
+                ON products(active,store,valid_from,valid_to,group_id)
+                WHERE (selection_flags & {flag}) != 0''')
+        # Include the older indexes too: missing statistics can make SQLite
+        # prefer an unselective index over the small selection indexes.
+        db.execute('ANALYZE products')
         for store in STORES:
             db.execute('INSERT OR IGNORE INTO imports(store) VALUES (?)', (store,))
             db.execute('INSERT OR IGNORE INTO flyer_imports(store) VALUES (?)', (store,))
@@ -230,6 +241,8 @@ def refresh(selected):
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
                 list(executor.map(import_store, selected))
+            with connect() as db:
+                db.execute('ANALYZE products')
         finally:
             with LOCK:
                 BUSY = False
@@ -265,8 +278,7 @@ def products(params, comparison=False):
         args.append(today)
     selection_terms, selection_args = list(terms), list(args)
     if selection:
-        terms.append('(selection_flags & ?) != 0')
-        args.append(selection['flag'])
+        terms.append(f"(selection_flags & {int(selection['flag'])}) != 0")
     if get('discount') == '1':
         # Only a lower published price counts; dates, Pfand and other notes do not.
         terms.append(DISCOUNT_SQL)
@@ -285,7 +297,7 @@ def products(params, comparison=False):
         if selection and not comparison:
             for entry in SELECTIONS:
                 stats = db.execute('SELECT count(*),coalesce(sum(CASE WHEN '+DISCOUNT_SQL+' THEN 1 ELSE 0 END),0) FROM products WHERE '+
-                                   ' AND '.join(selection_terms)+' AND (selection_flags & ?) != 0', selection_args+[entry['flag']]).fetchone()
+                                   ' AND '.join(selection_terms)+f" AND (selection_flags & {int(entry['flag'])}) != 0", selection_args).fetchone()
                 selections.append({**entry, 'count': stats[0], 'discount_count': stats[1]})
         counts = {} if comparison else dict(db.execute('SELECT group_id,count(*) FROM products WHERE ' + ' AND '.join(terms) + ' GROUP BY group_id', args).fetchall())
         category = 'all' if selection else get('category', 'all')
@@ -486,6 +498,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond({'error': 'Не найдено'}, 404)
             path = ROOT / 'static' / files[target.path]
             return self.respond(path.read_bytes(), kind=(mimetypes.guess_type(path)[0] or 'text/plain') + '; charset=utf-8')
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            # Switching selections may cancel an in-flight browser request.
+            return
         except (ValueError, KeyError):
             return self.respond({'error': 'Некорректный запрос'}, 400)
         except Exception as error:

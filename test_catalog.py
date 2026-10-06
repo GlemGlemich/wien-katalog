@@ -177,6 +177,34 @@ class PersistenceTests(unittest.TestCase):
         after=app.products({'selection':['protein']})['items'][0]
         self.assertEqual((after['price'],after['checked_at']),(before['price'],before['checked_at']))
 
+    def test_selection_queries_do_not_scan_unrelated_products(self):
+        # Budget database work rather than wall-clock time, which varies by PC.
+        app.save_page('spar', [self.row('milk', regular_price=2.99),
+                              self.row('other', name='Seife', category='Hygiene')],
+                      'a', 'https://www.spar.at')
+        with app.connect() as db:
+            db.execute('''WITH RECURSIVE numbers(n) AS (
+                SELECT 1 UNION ALL SELECT n+1 FROM numbers WHERE n<8000
+            ) INSERT INTO products(store,id,name,search,price,payload,checked_at,run)
+              SELECT store,'other-'||n,name,search,price,payload,checked_at,run
+              FROM products,numbers WHERE id='other' ''')
+            for entry in app.SELECTIONS:
+                db.execute(f"DROP INDEX product_selection_{entry['flag']}")
+        # Simulate upgrading an existing large catalogue.
+        app.initialize()
+        with app.connect() as db:
+            steps = []
+            db.set_progress_handler(lambda: steps.append(1) or 0, 1000)
+            from contextlib import contextmanager
+            @contextmanager
+            def measured_connection():
+                yield db
+            with patch.object(app, 'connect', measured_connection):
+                result = app.products({'selection': ['milk'], 'sort': ['updated']})
+            self.assertEqual([r['id'] for r in result['items']], ['milk'])
+            self.assertEqual(next(s for s in result['selections'] if s['id']=='milk')['discount_count'], 1)
+            self.assertLess(len(steps), 20, 'Switching selections scanned unrelated products')
+
     def test_migration_classifies_existing_rows_and_preserves_price(self):
         app.save_page('spar', [self.row('drink', category='Limonaden')], 'a', 'https://www.spar.at')
         with app.connect() as db:
