@@ -43,6 +43,12 @@
         <div id="selections-panel" class="hidden">
           <nav id="selections-list" class="selections-list" aria-label="Подборки продуктов"></nav>
           <p class="selection-note">Последние загруженные цены на сегодня. Дата проверки — рядом с каждым товаром; для повторной проверки нажмите «Обновить цены».</p>
+          <section id="selection-leaflets" class="selection-leaflets hidden" aria-label="Акции подборки из буклетов">
+            <strong>Акции в магазинах · из флюгблаттов</strong>
+            <p>По выбранной подборке, магазину и поиску. Цены онлайн-каталога и его фильтры — в таблице ниже.</p>
+            <div id="selection-leaflet-list"></div>
+            <button id="selection-leaflet-open" class="text-button">Все акции подборки →</button>
+          </section>
         </div>
         <nav id="categories" class="categories" aria-label="Категории товаров"><button class="category-tab selected" data-category="all" aria-pressed="true">Все товары</button></nav>
         <section id="product-facets" class="product-facets hidden" aria-label="Уточнить продукты">
@@ -85,6 +91,7 @@
         <div id="flyer-message" class="message hidden" role="status"></div>
         <section id="offers-view" aria-label="Товары из флюгблаттов">
           <div id="offer-coverage" class="offer-coverage" role="status">Читаем предложения…</div>
+          <div id="offer-selection-label" class="offer-coverage hidden"></div>
           <div class="catalog offer-catalog">
             <nav id="offer-categories" class="categories" aria-label="Категории акций"></nav>
             <div class="toolbar offer-toolbar">

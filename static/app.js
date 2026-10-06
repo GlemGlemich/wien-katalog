@@ -174,7 +174,7 @@ async function loadProducts() {
   if(comparisonOpen){$('comparison-status').textContent='Обновляем сравнение…';$('comparison-list').replaceChildren();}
   try{const data=await json('/api/products?'+params,{signal:productController.signal});if(id!==request)return;page=data.page;
     renderCategories(data.categories);
-    if(view==='selections')renderSelections(data.selections);
+    if(view==='selections'){renderSelections(data.selections);renderSelectionLeaflets(data.leaflet_offers);}
     renderFacets(data.facets||[]);
     renderQuantityFilters(data);
     loadComparison();
@@ -218,6 +218,19 @@ function highlightSelection(){
     button.classList.toggle('selected',active);button.setAttribute('aria-pressed',String(active));
   }
 }
+function renderSelectionLeaflets(data){
+  const panel=$('selection-leaflets'),list=$('selection-leaflet-list');
+  panel.classList.toggle('hidden',!data?.total);list.replaceChildren();
+  for(const offer of data?.items||[]){
+    const line=node('div','selection-leaflet-row');
+    line.append(node('span','',names[offer.store]+' · '+offer.name+' · '+offer.size),node('strong','',euros(offer.price_cents/100)+' · '+offer.deal),
+      node('span','',(offer.min_quantity>1?'При покупке '+offer.min_quantity+' уп.':'За 1 уп.')+(offer.membership_required?' · нужна '+offer.membership_label:'')),
+      node('span','',shortDate(offer.valid_from)+' — '+shortDate(offer.valid_to)));
+    list.append(line);
+  }
+  $('selection-leaflet-open').textContent='Все акции подборки ('+count(data?.total||0)+') →';
+}
+$('selection-leaflet-open').onclick=()=>{window.showSelectionOffers?.(selection,$('search').value);switchView('flyers');};
 function switchView(next, updateAddress=true) {
   clearTimeout(searchTimer);
   if(next!==view&&productFilters[view])productFilters[view]={category,q:$('search').value,period:$('period').value,sort:$('sort').value,discount:$('discount-only').checked,details:{...detailFilters},priceBasis:$('price-basis').value,packageSize:$('package-size').value||'all'};

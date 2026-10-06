@@ -205,6 +205,24 @@ class PersistenceTests(unittest.TestCase):
             self.assertEqual(next(s for s in result['selections'] if s['id']=='milk')['discount_count'], 1)
             self.assertLess(len(steps), 20, 'Switching selections scanned unrelated products')
 
+    def test_selection_keeps_shop_price_and_leaflet_promotion_separate(self):
+        from offer_model import make_offer
+        app.save_page('billa',[self.row('drink',name='Nöm PRO Kakao Proteindrink',price=2.29,unit='330 ml')],'a','https://shop.billa.at')
+        flyer={'id':'billa-test','url':'https://example.com/leaflet','valid_from':'2026-10-01','valid_to':'2026-10-07'}
+        row=make_offer(store='billa',flyer=flyer,page=11,name='Nöm PRO Proteindrink',price=114,size='330 ml',promo='1+1',minimum=2)
+        row['id']='drink-offer'
+        with app.connect() as db:
+            app.offers.save(db,'billa',[row],0,'2026-10-06T09:00:00Z')
+        with patch.object(app,'_vienna_date',return_value='2026-10-06'):
+            result=app.products({'selection':['protein'],'store':['billa']})
+            self.assertEqual(result['items'][0]['price'],2.29)
+            self.assertEqual(result['leaflet_offers']['items'][0]['price_cents'],114)
+            discounted=app.products({'selection':['protein'],'store':['billa'],'discount':['1']})
+            self.assertEqual(discounted['total'],0)
+            self.assertEqual(discounted['leaflet_offers']['total'],1)
+        with patch.object(app,'_vienna_date',return_value='2026-10-08'):
+            self.assertEqual(app.products({'selection':['protein']})['leaflet_offers']['total'],0)
+
     def test_migration_classifies_existing_rows_and_preserves_price(self):
         app.save_page('spar', [self.row('drink', category='Limonaden')], 'a', 'https://www.spar.at')
         with app.connect() as db:

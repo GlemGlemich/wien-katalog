@@ -7,7 +7,7 @@ from categories import classify
 
 DRINKS = [('all', 'Все напитки'), ('cola', 'Кола'), ('soft', 'Лимонады и сладкие напитки'),
           ('juice', 'Соки и нектары'), ('energy', 'Энергетики'), ('water', 'Вода'),
-          ('syrup', 'Сиропы'), ('alcohol', 'Алкоголь')]
+          ('syrup', 'Сиропы'), ('protein', 'Протеиновые напитки'), ('alcohol', 'Алкоголь')]
 
 
 def clean(text):
@@ -20,6 +20,8 @@ def cents(value):
 
 def drink_kind(name):
     text = clean(name).casefold()
+    if re.search(r'protein.*(?:drink|shake)|(?:drink|shake).*protein', text):
+        return 'protein'
     if re.search(r'sirup', text):
         return 'syrup'
     if re.search(r'cola|pepsi|coke', text):
@@ -124,7 +126,8 @@ def make_offer(*, store, flyer, page, name, price, size, promo='', minimum=1,
 ALIASES = {'кола': 'cola', 'кока': 'coca', 'пепси': 'pepsi', 'фанта': 'fanta',
            'сок': 'juice', 'соки': 'juice', 'нектар': 'juice', 'лимонад': 'soft',
            'напитки': 'drinks', 'напиток': 'drinks', 'молоко': 'milch', 'яйца': 'eier',
-           'сыр': 'käse', 'шоколад': 'schokolade', 'вода': 'water', 'пиво': 'bier'}
+           'сыр': 'käse', 'шоколад': 'schokolade', 'вода': 'water', 'пиво': 'bier',
+           'протеин': 'protein', 'протеиновые': 'protein', 'белок': 'protein'}
 
 
 def search_tokens(query):

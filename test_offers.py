@@ -1,13 +1,15 @@
 import gzip
 import json
 import sqlite3
+import tempfile
+import os
 import unittest
 from datetime import date
 from pathlib import Path
 from unittest.mock import patch
 
 import offers
-from offer_model import calculate, measure, matches, drink_kind
+from offer_model import calculate, measure, matches, drink_kind, make_offer
 from offer_pdf import parse_pages, page_dates
 
 
@@ -118,6 +120,40 @@ class OfferTests(unittest.TestCase):
             with self.assertRaises(ValueError):offers.save(db,'billa',[],999,'2026-10-04T09:00:00Z')
             self.assertEqual(before,[tuple(r) for r in db.execute('SELECT * FROM flyer_offers')])
             self.assertEqual(db.execute("SELECT checked_at FROM offer_imports WHERE store='billa'").fetchone()[0],'2026-10-03T09:00:00Z')
+
+    def test_protein_drink_visible_in_saved_leaflets_and_selection(self):
+        row=make_offer(store='billa',flyer=leaflet('billa'),page=11,
+                       name='Nöm PRO Proteindrink',price=114,size='330 ml (1 l 6.94/3.45)',
+                       promo='1+1',minimum=2)
+        self.assertEqual((row['group_id'],row['drink_kind']),('drinks','protein'))
+        # Old saved data must be repaired when read, without a network refresh.
+        row.update(id='protein-test',group_id='other',drink_kind='')
+        with self.database() as db:
+            offers.save(db,'billa',[row],0,'2026-10-06T09:00:00Z')
+            result=offers.query(db,{'store':['billa'],'selection':['protein'],'category':['drinks'],'drink':['protein'],'q':['протеин']},'2026-10-06')
+            self.assertEqual(result['total'],1)
+            self.assertEqual((result['items'][0]['price_cents'],result['items'][0]['min_quantity']),(114,2))
+            self.assertEqual(offers.query(db,{'selection':['protein']},'2026-10-08')['total'],0)
+            self.assertEqual(offers.query(db,{'store':['billa'],'selection':['protein']},'2026-10-04')['total'],0)
+
+    def test_previews_share_page_cache_and_reject_unknown_offers(self):
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as folder, patch.object(offers,'CACHE',Path(folder)), self.database() as db:
+            row=json.loads(db.execute("SELECT payload FROM flyer_offers WHERE store='billa' LIMIT 1").fetchone()[0])
+            self.assertIsNone(offers.page_preview(db,'billa','../../missing'))
+            self.assertIsNone(offers.page_preview(db,'billa',row['id']))
+            path=offers.cache_path({'id':row['flyer_id']});path.write_bytes(b'fake-pdf')
+            with patch('pdfplumber.open') as opened:
+                pages=opened.return_value.__enter__.return_value.pages
+                pages.__len__.return_value=160
+                pages.__getitem__.return_value.to_image.return_value.original=Image.new('RGB',(400,600),'white')
+                first=offers.page_preview(db,'billa',row['id'])
+                self.assertTrue(first.startswith(b'\xff\xd8'))
+                self.assertEqual(first,offers.page_preview(db,'billa',row['id']))
+                self.assertEqual(opened.call_count,1)
+                stat=path.stat();os.utime(path,ns=(stat.st_atime_ns,stat.st_mtime_ns+1000000000))
+                offers.page_preview(db,'billa',row['id'])
+                self.assertEqual(opened.call_count,2)
 
 
 if __name__=='__main__':unittest.main()

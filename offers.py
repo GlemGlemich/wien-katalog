@@ -4,6 +4,7 @@ import json
 import math
 import re
 import time
+import threading
 import urllib.request
 from datetime import date, timedelta
 from pathlib import Path
@@ -14,11 +15,36 @@ from categories import CATEGORIES as CATALOG_CATEGORIES
 CATEGORIES = [(key,label) for key,label in CATALOG_CATEGORIES if key!='alcohol']
 from flyers import current, script_json, https
 from sources import fetch, STORES
-from offer_model import DRINKS, matches
+from offer_model import DRINKS, matches, drink_kind
+from selections import SELECTIONS, selection_flags
 from offer_pdf import read_pdf, parse_pages
 
 PARSER_VERSION = 3
 CACHE = Path(__file__).parent / 'data' / 'leaflet-cache'
+PREVIEW_LOCK = threading.Lock()
+
+
+def page_preview(db, store, ident):
+    """Render only a known offer's local PDF page; never fetch arbitrary URLs."""
+    row = db.execute('SELECT payload FROM flyer_offers WHERE store=? AND id=?', (store, ident)).fetchone()
+    if not row:
+        return None
+    offer = json.loads(row[0])
+    path = cache_path({'id': offer['flyer_id']})
+    if not path.is_file() or not 1 <= int(offer['page']) <= 160:
+        return None
+    # Re-downloaded/revised PDFs get a new preview. Offers on one page share it.
+    dest = path.with_name(f'{path.stem}-page-{offer["page"]}-{path.stat().st_mtime_ns}.jpg')
+    with PREVIEW_LOCK:
+        if not dest.exists():
+            import pdfplumber
+            with pdfplumber.open(path) as pdf:
+                if offer['page'] > len(pdf.pages):
+                    return None
+                image = pdf.pages[offer['page']-1].to_image(resolution=45).original
+                image.thumbnail((220, 290))
+                image.convert('RGB').save(dest, format='JPEG', quality=85)
+        return dest.read_bytes()
 
 
 def initialize(db):
@@ -153,12 +179,22 @@ def query(db,params,today,busy=False):
     get = lambda key,default='':params.get(key,[default])[0]
     rows = [json.loads(r[0]) for r in db.execute('SELECT payload FROM flyer_offers')]
     rows = [r for r in rows if valid(r,today)]
+    # Reclassify saved offers as well, without downloading the PDF again.
+    for row in rows:
+        kind = drink_kind(row['name']) if row.get('measure') == 'l' else ''
+        if kind:
+            row['drink_kind'], row['group_id'] = kind, 'drinks'
     stores = [dict(r) for r in db.execute('SELECT * FROM offer_imports')]
     for s in stores:
         s.update(name=STORES[s['store']]['name'],count=sum(r['store']==s['store'] for r in rows))
     all_total = len(rows)
     if get('store') in STORES:
         rows = [r for r in rows if r['store']==get('store')]
+    if get('selection'):
+        selection = next((s for s in SELECTIONS if s['id']==get('selection')), None)
+        if selection is None:
+            raise ValueError('Неизвестная подборка')
+        rows = [r for r in rows if selection_flags({'name':r['name']}) & selection['flag']]
     if get('membership') == 'no':
         rows = [r for r in rows if not r['membership_required']]
     limit = max(0,min(100,int(get('quantity','0'))))

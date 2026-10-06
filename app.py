@@ -379,10 +379,14 @@ def products(params, comparison=False):
         total = db.execute('SELECT count(*) FROM products WHERE ' + where, args).fetchone()[0]
         page = min(page, max(1, math.ceil(total / size)))
         rows = db.execute('SELECT payload,details,quantity FROM products WHERE ' + where + ' ORDER BY ' + order + ',store,id LIMIT ? OFFSET ?', args + [size, (page - 1) * size]).fetchall()
+        leaflet_offers = None
+        if selection:
+            leaflet_offers = offers.query(db, {'selection':[selection['id']], 'store':[store], 'q':[get('q')], 'sort':['price']}, today)
     categories = [{'id': 'all', 'label': 'Все товары', 'count': sum(counts.values())}]
     categories.extend({'id': key, 'label': label, 'count': counts.get(key, 0)} for key, label in CATEGORIES)
     return {'items': [{**json.loads(r[0]),'details':json.loads(r[1]),'quantity':json.loads(r[2])} for r in rows], 'total': total, 'page': page, 'pages': max(1, math.ceil(total / size)), 'size': size, 'categories': categories,
-            'selections': selections, 'selection': selection['id'] if selection else None, 'facets':facets,'sizes':sizes,'price_basis':basis}
+            'selections': selections, 'selection': selection['id'] if selection else None, 'facets':facets,'sizes':sizes,'price_basis':basis,
+            'leaflet_offers': {'items':leaflet_offers['items'][:3], 'total':leaflet_offers['total']} if leaflet_offers else None}
 
 
 def flyer_state():
@@ -493,6 +497,13 @@ class Handler(BaseHTTPRequestHandler):
                 with connect() as db:
                     result = offers.query(db,parse_qs(target.query),_vienna_date(time.time()),FLYERS_BUSY)
                 return self.respond(result)
+            if target.path == '/api/offer-preview':
+                params = parse_qs(target.query)
+                with connect() as db:
+                    preview = offers.page_preview(db, params.get('store',[''])[0], params.get('id',[''])[0])
+                if preview is None:
+                    return self.respond({'error':'Страница буклета недоступна'},404)
+                return self.respond(preview, kind='image/jpeg')
             files = {'/': 'index.html', '/app.js': 'app.js', '/offers.js': 'offers.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg'}
             if target.path not in files:
                 return self.respond({'error': 'Не найдено'}, 404)
