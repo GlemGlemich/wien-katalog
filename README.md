@@ -1,101 +1,134 @@
-# Ценник — каталог товаров для Вены
+# Price Tag — Vienna grocery catalogue
 
-Чтение сайтов SPAR, BILLA, HOFER, PENNY и Lidl Österreich, сохранение товаров и цен, просмотр каталога и текущих флюгблаттов. Список покупок и маршруты пока не входят в программу.
+A local catalogue of products, prices and current promotional leaflets from **SPAR, BILLA, HOFER, PENNY and Lidl Austria**. Browse saved prices, filter products, compare stores and inspect offers extracted from official Flugblatt PDFs. Shopping lists and route planning are not implemented.
 
-Исходный код хранится в Git. После изменений приложения запускайте подходящие проверки, создавайте коммит и отправляйте его в GitHub. Локальная база цен и кэш буклетов в репозиторий не входят: на новой копии программы каталог заполнится после первого обновления цен.
+## Getting started
 
-## Запуск
+Requires **Python 3.10 or later**. Install the PDF extraction dependencies:
 
-Дважды нажмите **Запустить каталог.cmd**. Каталог откроется по адресу http://127.0.0.1:8765. Окно программы должно оставаться открытым. Требуется Python 3.10 или новее. Для чтения новых PDF нужна библиотека `pdfplumber`: на другом компьютере установите её командой `python -m pip install -r requirements.txt`. На этом компьютере автоматически используется Python, поставляемый с Codex; библиотека уже установлена. Сохранённые товары доступны и без неё.
+```sh
+python -m pip install -r requirements.txt
+python app.py --open
+```
 
-Нажмите **Считать цены** для обхода всех пяти источников. При выборе магазина кнопка обновляет только его. Обновление занимает несколько минут. Каталог пополняется по мере чтения; товары сохраняются в `data/catalog.sqlite3` между запусками. Интернет нужен для загрузки цен и изображений, сохранённые названия и цены доступны без него.
+On Windows, you can also double-click **`Запустить каталог.cmd`** (the catalogue launcher). It uses the bundled Codex Python runtime when available, otherwise the `python` command. Keep the server window open. The app runs at [http://127.0.0.1:8765](http://127.0.0.1:8765).
 
-Из командной строки: `python app.py --open`. Для обновления сразу при запуске: `python app.py --open --refresh`.
+Click **Download prices** to read all five sources. Selecting a store limits the update to that store. Downloads take several minutes; products appear as they arrive and are saved in `data/catalog.sqlite3` between sessions. Internet access is needed for new prices and images. Saved names and prices remain available offline and without the PDF extraction dependency.
 
-Проверка: `python -m unittest -v test_catalog test_product_details test_quantities test_alcohol test_network test_flyers test_offers` — обработка условных цен, весовых товаров, сроков акций, сочетания фильтров, сравнения магазинов и сохранности данных при сетевом сбое. Проверки извлечения используют текст и координаты реальных страниц, без сетевых запросов.
+To refresh prices on startup:
 
-## Акции · Flugblatt
+```sh
+python app.py --open --refresh
+```
 
-Список открывается на всех категориях. Для протеиновых напитков есть фильтр «Напитки → Протеиновые напитки»; он работает и с ранее сохранёнными предложениями. Рядом с предложением показано превью страницы оригинального PDF, а нажатие открывает источник. Превью создаётся локально из уже загруженного PDF и сохраняется в кэше; это изображение страницы, а не подобранная фотография похожего товара.
+## Interface language
 
-В «Выбранных продуктах» отдельно показаны первые три акции из буклетов по подборке, выбранному магазину и строке поиска, с переходом ко всем найденным акциям. Это цены в магазинах с условиями покупки; они не заменяют цены онлайн-каталога в таблице. Остальные фильтры таблицы относятся к онлайн-каталогу. Например, цена NÖM PRO в интернет-магазине может отличаться от акции 1+1 в бумажном буклете. Пропущенные при распознавании сложные блоки учитываются в сообщении об охвате: полный ассортимент всех буклетов пока не гарантируется.
+Use the **Русский / English** selector in the top bar. Russian is the default. Your choice is saved in this browser and restored on the next visit. If browser storage is unavailable, switching still works for the current page.
 
-Вкладка **Акции · Flugblatt → Товары и цены** показывает предложения списком, извлечённые непосредственно из официальных PDF. В строке есть магазин, объём или вес, цена, условие «1+1», «3+3» или минимальное количество, даты и ссылка на страницу оригинала. Обычная цена и цена по Lidl Plus показаны отдельными предложениями. Обложки и ссылки сохранены в разделе **Буклеты магазинов**. Фильтр магазина слева работает в обоих разделах.
+Navigation, filters, selections, comparisons, leaflet controls, statuses, application messages and accessible labels are translated. Number and date formatting follows the language; dates remain in the **Europe/Vienna** time zone and prices in **EUR**. Switching keeps your section, store, search and filters and does not download prices from retailer websites.
 
-Выберите **Напитки → Кола**, **Соки и нектары**, **Лимонады и сладкие напитки** и другие группы либо введите название. Поиск понимает, например, «кола», «соки», «сыр». Можно исключить карты/купоны и ограничить минимальное число упаковок. Сравнение по литру появляется для одной группы напитков, когда найдены предложения как минимум двух магазинов. Это сравнение найденных предложений, а не обещание самой низкой цены во всей Вене; бренды, вкусы и состав внутри группы отличаются.
+Original retailer product names, categories and promotional wording remain as published, usually in German. App-generated purchase conditions are translated. Translations live in `static/i18n.js`; no translation service, AI API or tokens are required.
 
-**Охват на 03.10.2026:** читается часть товаров из PDF BILLA, HOFER, Lidl и SPAR Wien. У PENNY просмотрщик не предоставляет доступного PDF; доступны обложка и ссылка на оригинал. Нечитаемые, неоднозначные блоки, смешанные размеры, приблизительный вес и сложные альтернативные условия пропускаются. Пропущенные блоки отражены в состоянии чтения. Каталог сайта не подмешивается к товарам флюгблатта. Полное извлечение всех товаров из всех пяти буклетов пока не обеспечивается.
+## Catalogue and product selections
 
-Цена «bei 6 je» уже включает скидку: она не делится на два ещё раз. Например, напечатанные €0,99 при покупке шести упаковок дают расчётную сумму ≈ €5,94. Если ценник округлён вниз, итог на кассе может отличаться на несколько центов. Цена за литр/килограмм тоже рассчитывается по напечатанной цене. Pfand не включён. Исходные условия доступны в каждой строке. Весовые цены относятся к указанному весу.
+The main catalogue groups products into **Drinks**, **Alcohol**, **Sweets and snacks**, **Fruit and vegetables**, **Dairy and eggs**, **Meat and fish**, **Bread and pantry**, **Ready meals** and **Other**. Categories combine with store, search, validity and sorting filters. Counts reflect active filters. The original retailer category appears under the product name.
 
-**Обновить акции** проверяет выпуски и читает их товары, без повторной загрузки каталога сайта. PDF крупные: первая загрузка может занять несколько минут и сотни мегабайт. Файлы и извлечённый текст временно хранятся в `data/leaflet-cache`; PDF одного выпуска повторно используется в пределах шести часов. В архив программы этот кеш не включён. При открытой вкладке программа автоматически проверяет источники, если последняя попытка была больше шести часов назад. При закрытой программе обновления не выполняются. Ошибка чтения не удаляет сохранённые предложения и не меняет дату их последней успешной проверки.
+**Product selections** contains five overlapping selections:
 
-Срок действия читается из официальных данных, включая именно даты предложений Lidl, а не даты публикации файла. Для товаров учитываются более короткие сроки на странице; выходные акции HOFER не продлеваются на всю неделю. Будущие и завершённые предложения скрываются по местной дате Вены даже без обновления. Для BILLA учитывается исключение воскресений и общегосударственных праздников, указанное в буклете. Используется текстовый слой PDF; сканы без текста пока не распознаются.
+- **Sweet drinks:** cola, juices, soft drinks, iced tea and energy drinks, including Zero versions.
+- **Protein products:** names or retailer categories marked Protein, High Protein, Eiweiß or Whey. Protein content is not calculated. Pet food and cosmetics are excluded.
+- **Milk:** plain, flavoured and plant-based drinks, with lactose-free labelling, fat content and storage filters: Frisch, Länger frisch / ESL and H-Milch. Combine filters, for example Laktosefrei + Vollmilch. Missing lactose-free labelling does not prove that a product contains lactose. Plant-based drinks are not assigned cow's-milk fat categories.
+- **Meat and fish:** chicken, pork, beef, turkey, veal, lamb, other poultry, game, mixed meat, fish and seafood. Refine by cuts, mince, sausages/smoked products or prepared products. Unknown types remain unspecified. Plant substitutes and meat-flavoured products are excluded.
+- **Alcohol:** beer/cider, wine, sparkling wine, spirits/liqueurs and cocktails/mixes. Alkoholfrei, 0,0 and Entalkoholisiert versions remain in Drinks. Sweets, flavourings, cosmetics and other non-drinks with alcohol-related names are excluded. Alcohol strength is not inferred.
 
-Источники: [SPAR](https://www.spar.at/aktionen), [BILLA](https://www.billa.at/unsere-aktionen/flugblatt), [HOFER](https://www.hofer.at/flugblatt), [PENNY](https://www.penny.at/angebote/flugblaetter), [Lidl](https://www.lidl.at/c/flugblatt/s10012330). Для SPAR и BILLA выбираются венские выпуски; для остальных — общие австрийские. Для PENNY просмотр открывается на официальной странице магазина.
+Detailed filters also appear in the relevant main categories. Counts consider the other filters; unavailable combinations are disabled. **Reset filters** clears search, discounts, refinements and quantity filters and returns validity to **Valid today**, keeping your selection and store. Catalogue and selection filters are retained separately when switching tabs.
 
-**Ограничение SPAR:** при проверке 02.10.2026 страница списка выпусков возвращала HTTP 403. Текущий венский выпуск доступен напрямую, поэтому его ранее найденная ссылка сохранена в `data/flyer-sources.json`. При недоступности списка программа проверяет сроки известных выпусков и показывает предупреждение, что новые выпуски могут быть пропущены. Она не придумывает ссылки на следующие недели и не выдаёт такую проверку за полное обновление списка. После окончания срока старый выпуск скрывается; официальный сайт остаётся доступен из раздела проверки источников.
+Selections show the latest saved prices valid today, excluding future and expired offers. Recently checked products appear first by default. Rows retain check times and regular, discounted, loyalty and multipack conditions. Opening a selection does not fetch retailer prices; use **Refresh prices** for that.
 
-## Категории
+Classification uses retailer categories first, then product names when necessary. Unknown attributes are not guessed. Reclassification does not change price check times. Some classification errors are possible.
 
-В отдельной вкладке **Выбранные продукты** есть пять готовых подборок: **Сладкие напитки** (включая Zero), **Продукты с протеином**, **Молоко**, **Мясо и рыба** и **Алкоголь**. Протеиновая подборка определяется по названию или категории магазина с пометками Protein, High Protein, Eiweiß или Whey; количество белка программа не рассчитывает. Корма для животных и косметика исключаются.
+## Reading and comparing prices
 
-В **Алкоголе** можно выбрать пиво и сидр, вино, игристое, крепкие напитки и ликёры, коктейли и миксы. Работают фильтры скидок и объёма упаковки, сортировка по цене за литр и сравнение магазинов. Напитки с пометками Alkoholfrei, 0,0 или Entalkoholisiert остаются в обычных напитках; сладости, ароматизаторы, косметика и другие товары с алкогольными названиями исключаются. Вид определяется по названию и разделам магазина, без угадывания крепости. Во флюгблаттах сохраняется существующий фильтр **Напитки → Алкоголь**.
+Choose **Compare prices by → Per 1 kg / Per 1 l** to highlight the unit price and sort from lowest to highest. The original website price for the pack or stated quantity stays visible. Kilograms and litres are never mixed; products without a known price for the chosen unit are excluded from that mode.
 
-В **Молоке** отдельно выбираются вид (без добавок, со вкусом, растительное), лактоза, жирность и хранение (Frisch, Länger frisch / ESL, H-Milch). Фильтры сочетаются: например, **Laktosefrei + Vollmilch**. Отсутствие отметки Laktosefrei не считается подтверждением содержания лактозы. Растительные варианты не получают категорию жирности коровьего молока.
+**Pack weight / volume** shows sizes and counts, such as 250 g, 500 g, 1 kg or 1 l. Sizes refer to the entire pack: 2 × 250 g counts as 500 g. Variable-weight products are separate, even when priced per kg. Ranges, alternative sizes such as 120/150 g and approximate weights are not presented as exact sizes.
 
-В **Мясе и рыбе** можно выбрать курицу, свинину, говядину, индейку, телятину, баранину, другую птицу, дичь, смешанное мясо или рыбу. Отдельно выбираются куски/филе, фарш, колбасы/копчёности и подготовленные блюда. Вид без явного названия или раздела магазина остаётся неуказанным. Растительные заменители и продукты только со вкусом мяса сюда не включаются.
+The retailer's published unit price takes priority. Prices per 100 g or 500 ml are normalised to per kg or litre, preserving the retailer's basis, including drained weight where relevant. Otherwise, calculation requires an unambiguous fixed pack size. Unknown weight is not inferred from price. A 1+1 discount is not applied twice to an already discounted price.
 
-Эти фильтры также доступны в основных категориях **Молочное и яйца** и **Мясо и рыба**. Числа возле вариантов учитывают остальные выбранные фильтры; недоступные сочетания отключены. **Сбросить фильтры** убирает поиск, скидку, уточнения и возвращает срок «На сегодня», сохраняя текущую подборку и магазин. Настройки основного каталога и подборок сохраняются отдельно при переключении вкладок. Подразделы определяются по сохранённым названиям и категориям, поэтому неизвестные признаки не угадываются, а время проверки цены не меняется при переклассификации.
+**Compare stores** shows the cheapest matching saved offer from each of the five stores per kg or litre. It uses category/selection, search, subtype, size and discount filters across all stores, even when one store is selected in the sidebar. It considers all matching saved products, not just the current page, and excludes future and expired offers.
 
-Подборки показывают последние загруженные цены на сегодня, без будущих и истёкших предложений. По умолчанию выше недавно проверенные товары; в строках сохранены даты проверки, обычные и сниженные цены, условия карты или покупки нескольких упаковок. Можно искать внутри подборки, выбрать магазин и включить **Только товары со скидкой**. На карточке подборки указано число товаров и скидок с учётом поиска и магазина. **Обновить цены** повторно загружает каталоги выбранного магазина или всех магазинов. Сам переход во вкладку не означает нового обращения к магазинам.
+The lowest main price is highlighted; other rows show the difference. Separate loyalty prices appear alongside and do not determine the ordering. Their unit prices are approximate, scaled in proportion to the main price. Brands and products can differ: this is not barcode matching. Each result includes its name, quantity, check time and source. No matching saved result does not imply that a store has no such product in stock. Filter changes update an open comparison.
 
-Над поиском расположены девять общих групп: **Напитки**, **Алкоголь**, **Сладкое и снеки**, **Овощи и фрукты**, **Молочное и яйца**, **Мясо и рыба**, **Хлеб и бакалея**, **Готовая еда**, **Другое**. Кнопка **Все товары** снимает выбор категории.
+**Discounted products only** includes confirmed reductions: a main price below the regular price, a multipack price below the single-item price, or a loyalty price below the main price. Conditions stay visible.
 
-Категория сочетается с магазином, поиском, сроком действия и сортировкой. Числа на вкладках учитывают выбранный магазин, поиск и срок. Раздел «Другое» включает непродовольственные товары и позиции, для которых не удалось надёжно определить группу. При обновлении новые товары распределяются автоматически; существующие товары также уже распределены.
+- Conditional prices include their conditions and single-item prices when available.
+- jö and Lidl Plus prices do not replace the main price.
+- Original quantities remain visible; normalised prices are shown separately.
+- A historical 30-day low is not treated as the regular price.
+- Future and expired offers are retained but excluded from **Valid today**.
+- Missing expiry dates are not invented. Checks older than 24 hours are marked as stale.
+- Check times use Vienna time. Branch-level stock is not verified.
 
-Основной источник классификации — категории магазина, а название используется, когда категория отсутствует или слишком общая. Такое объединение может содержать отдельные неточности; исходная категория магазина остаётся под названием товара.
+## Offers · Flugblatt
 
-## Какие данные собираются
+**Offers → Products and prices** lists offers extracted from official PDFs. Rows show the store, size, price, conditions such as 1+1 or minimum quantity, dates and original-page links. Regular and Lidl Plus offers are separate. **Store leaflets** contains covers and source links. The sidebar store filter applies to both views.
 
-Каждый загрузчик проходит все страницы опубликованного каталога. Сохраняются идентификатор, название, магазин, количество, опубликованная цена, прежняя цена, условия, сроки, изображение, ссылка и время проверки. Цены хранятся для сортировки в целых евроцентах.
+All categories are shown initially. Choose **Drinks → Cola**, **Juices and nectars**, **Soft drinks**, **Protein drinks** or another group, or search by product name. Russian aliases are also supported. Exclude loyalty cards/coupons or limit the quantity you are willing to buy. A per-litre best-offer comparison appears for a drink group when at least two stores have matching offers. It compares extracted offers, not every product in Vienna; brands, flavours and ingredients may differ.
 
-| Магазин | Источник | Граница охвата |
+Offer previews are images of original PDF pages generated locally from downloaded PDFs and cached. They are not substitute product photos. Clicking opens the original source.
+
+**Product selections** also shows up to three matching leaflet offers and a link to all results, using the selection, store and search. These are in-store offers with their own conditions; they do not replace online prices in the table. Other table filters apply to the online catalogue only. For example, an online NÖM PRO price can differ from a leaflet's 1+1 offer.
+
+### Coverage and limitations
+
+As documented on **3 October 2026**, extraction covers some products from BILLA, HOFER, Lidl and SPAR Vienna PDFs. PENNY's viewer does not provide a usable PDF; its cover and original link remain available. Full extraction from all five stores is not guaranteed. Scans without a text layer are not recognised. Ambiguous layouts, mixed sizes, approximate weights and complex alternative conditions are skipped and counted in coverage status. Online catalogue prices are not substituted for missing leaflet offers.
+
+Printed prices such as “bei 6 je” already include the discount and are not halved again. A printed €0.99 when buying six packs gives an estimated total of €5.94. Rounding may cause a few cents' difference at checkout. Unit prices use the printed price; Pfand deposits are excluded. Original conditions remain accessible.
+
+**Refresh offers** checks editions and extracts products without reloading online catalogues. Initial PDF downloads may take several minutes and hundreds of megabytes. PDFs and extracted text are cached in `data/leaflet-cache`; an edition's PDF is reused for up to six hours. With the offers tab open, sources are checked automatically when the last attempt was over six hours ago. Nothing updates while the program is closed. Failed reads preserve saved offers and their successful check times.
+
+Validity comes from official offer dates rather than file publication dates. Shorter page-specific periods are respected, including HOFER weekend offers. Future and expired offers are hidden using Vienna's local date even without a refresh. BILLA Sunday and nationwide Austrian public-holiday exclusions are applied when stated in the leaflet.
+
+Official sources: [SPAR](https://www.spar.at/aktionen), [BILLA](https://www.billa.at/unsere-aktionen/flugblatt), [HOFER](https://www.hofer.at/flugblatt), [PENNY](https://www.penny.at/angebote/flugblaetter), [Lidl](https://www.lidl.at/c/flugblatt/s10012330). SPAR and BILLA use Vienna editions; other stores use Austrian editions. PENNY opens on its official website.
+
+**SPAR limitation recorded on 2 October 2026:** the edition listing returned HTTP 403. Previously discovered Vienna links are retained in `data/flyer-sources.json`. When the listing is unavailable, the app checks known editions and warns that new editions may be missing. It does not invent future links or claim a complete listing refresh. Expired editions are hidden; the official website remains linked in source checks.
+
+## Data sources
+
+Importers traverse all pages of their available published catalogue. Saved fields include product ID, name, store, quantity, price, previous price, conditions, validity, image, source URL and check time. Prices are stored as integer euro cents for sorting.
+
+| Store | Source | Coverage boundary |
 | --- | --- | --- |
-| SPAR | Открытый поисковый каталог SPAR, все страницы | Онлайн-ассортимент; независимые филиалы могут иметь другие цены |
-| BILLA | Публичный каталог BILLA Online Shop, все страницы | Без выбранного адреса доставки; цена в филиале может отличаться |
-| HOFER | Страницы `/produkte?page=N` | Только ассортимент, опубликованный на сайте |
-| PENNY | Публичный каталог товаров PENNY, все страницы | Преимущественно предложения с указанными датами |
-| Lidl | Страницы `/q/search?fetchSize=60&offset=N` | Опубликованные товары, преимущественно предложения недели, без выбранного филиала |
+| SPAR | Public search catalogue, all pages | Online range; independent branches may use different prices |
+| BILLA | Public BILLA Online Shop catalogue, all pages | No delivery address selected; in-store prices may differ |
+| HOFER | `/produkte?page=N` | Only products published on the website |
+| PENNY | Public product catalogue, all pages | Mainly offers with validity dates |
+| Lidl | `/q/search?fetchSize=60&offset=N` | Mainly weekly offers, without a selected branch |
 
-«Все товары» означает все позиции доступного источника с опубликованной ценой, а не гарантированно весь ассортимент физических магазинов. Позиции без цены учитываются отдельно в состоянии источника. Товары разных магазинов не объединяются автоматически. Каталог содержит также непродовольственные товары, если магазин их публикует.
+“All products” means all available source items with published prices, not guaranteed coverage of physical stores. Unpriced items are counted separately in source status. Products across stores are not automatically merged. Published non-food items are included.
 
-## Как читать цены
+## Reliability and local operation
 
-В основном каталоге и подборках есть **Как сравнивать цену → За 1 кг / За 1 л**. При переключении автоматически включается сортировка от дешёвых к дорогим за выбранную единицу, а цена за кг/литр становится основной в строке. Цена, указанная на сайте за упаковку или весовое количество, сохраняется рядом. Килограммы и литры не смешиваются; товары с неизвестной ценой за выбранную единицу не входят в этот режим.
+The **Python process** needs network access. When internet access is blocked, the browser can still show saved products while updates fail. Allow network access and restart the server, or launch the Windows script normally. The app distinguishes blocked access from an unavailable network, displays the cause and avoids retrying explicitly blocked requests. Transient connection/server failures receive limited retries. Failed attempts do not change saved prices or successful check times.
 
-Фильтр **Вес / объём упаковки** показывает доступные размеры с количеством товаров: например, 250 г, 500 г, 1 кг или 1 л. Размер относится ко всей упаковке: 2 × 250 г считаются 500 г. Весовые товары вынесены отдельно, даже если магазин указывает цену за 1 кг. Диапазоны, варианты вроде 120/150 г и приблизительный вес не выдаются за точный размер. Размеры, которых нет при текущих фильтрах, не подставляются автоматически.
+Retailer requests run locally, avoiding browser CORS restrictions. The server binds to `127.0.0.1`. Updates require a random local session token, SQL queries are parameterised and TLS certificates are verified. Store failures do not erase saved data. Incomplete imports preserve previous products; missing items are hidden only after a complete successful import.
 
-Цена магазина за стандартное количество имеет приоритет: цена за 100 г пересчитывается в цену за кг, за 500 мл — в цену за литр. Это сохраняет основу расчёта магазина, в том числе вес без жидкости у консервов. Если такой цены нет, её можно рассчитать только по однозначному фиксированному размеру упаковки. Неизвестный вес не восстанавливается из цены. Скидка «1+1» не применяется второй раз к уже сниженной цене. Условия карты и минимальной покупки остаются видны.
+Retailer interface changes may require updates to `parsers.py` or `sources.py`. Errors are shown explicitly; sample prices are never presented as real prices.
 
-Кнопка **Сравнить магазины** показывает самое дешёвое подходящее предложение каждого из пяти магазинов по цене за кг или литр. Учитываются подборка/категория, поиск, подвид продукта, размер упаковки и переключатель скидок. Сравнение всегда охватывает все магазины, даже если слева выбран один, и исключает будущие и завершённые предложения. Сравниваются все подходящие товары в сохранённом каталоге, а не только текущая страница списка. Разные бренды и продукты могут отличаться: название, количество, дата проверки и ссылка на оригинал показаны в каждой строке. Это не автоматическое сопоставление идентичных штрихкодов.
+## Development and checks
 
-Самая низкая основная опубликованная цена выделяется, у остальных указана разница. Отдельные предложения по карте выводятся рядом и не меняют этот порядок; их цена за кг/литр приблизительно пересчитывается в той же пропорции к основной цене. Если товара с подходящими параметрами в сохранённом каталоге магазина нет, выводится соответствующее сообщение, а не вывод об отсутствии в самом магазине. Обновление фильтров обновляет и открытое сравнение. Сравнение использует последние загруженные цены; для новой проверки сайтов нажмите **Обновить цены**.
+Run the Python regression tests:
 
-В основном каталоге переключатель **Только товары со скидкой** оставляет позиции, у которых опубликованная цена ниже обычной, цена при покупке нескольких упаковок ниже одиночной либо цена по карте ниже основной. Он сочетается с поиском, магазином, категорией и сроком действия. Условия скидки остаются рядом с ценой. Товары без подтверждённого снижения цены не включаются в этот фильтр.
+```sh
+python -m unittest -v test_catalog test_product_details test_quantities test_alcohol test_network test_flyers test_offers
+```
 
-- Условная цена показана вместе с условием (например, покупка от двух упаковок). Если источник указывает цену за одну упаковку, она показана отдельно.
-- Цены по карте jö или Lidl Plus не подменяют обычную цену: они показаны отдельно с названием карты.
-- Цена за 100 г не превращается в цену за килограмм. Смотрите указанное количество и цену за единицу измерения.
-- Исторический минимум за 30 дней не используется как обычная цена.
-- Будущие и завершённые предложения сохраняются, но исключаются из фильтра «На сегодня».
-- Если магазин не указал срок, программа не придумывает дату окончания. Цена с проверкой старше суток помечается как требующая обновления.
-- Время проверки отображается для Вены. Наличие товара в конкретном филиале не проверяется.
+These cover conditional prices, weights, validity, combined filters, comparisons and data preservation after network failures. Extraction tests use real-page text and coordinates without network requests.
 
-## Надёжность
+Run the language checks with Node.js:
 
-Каталогу нужен сетевой доступ именно у процесса Python. Если программа запущена из среды с запрещённым интернетом, браузер может показывать сохранённые товары, а обновление всех магазинов будет сразу завершаться ошибкой. Нужно разрешить сетевой доступ и перезапустить сервер с этим разрешением либо закрыть его и запустить **Запустить каталог.cmd** обычным способом. Приложение различает запрет сетевого доступа и недоступную сеть, показывает общую причину прямо над каталогом и не повторяет заведомо заблокированный запрос. Временные ошибки соединения и сервера по-прежнему получают ограниченное число повторов. После успешного чтения сообщение об ошибке исчезает автоматически; сохранённые цены и даты проверки не меняются при неуспешной попытке.
+```sh
+node --test test_i18n.cjs
+```
 
-Сетевые запросы выполняются на компьютере, поэтому браузеру не нужен доступ к API магазинов через CORS. Программа работает только на `127.0.0.1`. Обновление защищено случайным токеном локальной сессии; SQL-запросы параметризованы. TLS проверяется. Ошибка магазина не стирает сохранённые данные. При неполном обходе показывается ошибка, а прежние товары сохраняются. Позиции, исчезнувшие из источника, скрываются только после успешного полного обхода.
-
-У сайтов нет обещания сохранять эти публичные интерфейсы неизменными. При изменении формата может понадобиться обновить `parsers.py` или `sources.py`. Программа явно показывает ошибки и не выдаёт тестовые цены за реальные.
+After application changes, run appropriate checks, commit and push to `origin/main`. Do not commit the local database, leaflet cache, update state, credentials or secrets. A fresh checkout fills its catalogue after the first price update.

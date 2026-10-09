@@ -504,7 +504,7 @@ class Handler(BaseHTTPRequestHandler):
                 if preview is None:
                     return self.respond({'error':'Страница буклета недоступна'},404)
                 return self.respond(preview, kind='image/jpeg')
-            files = {'/': 'index.html', '/app.js': 'app.js', '/offers.js': 'offers.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg'}
+            files = {'/': 'index.html', '/app.js': 'app.js', '/i18n.js': 'i18n.js', '/offers.js': 'offers.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg'}
             if target.path not in files:
                 return self.respond({'error': 'Не найдено'}, 404)
             path = ROOT / 'static' / files[target.path]
