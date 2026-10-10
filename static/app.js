@@ -4,7 +4,7 @@ const count = n => new Intl.NumberFormat(locale()).format(n);
 const euros = n => new Intl.NumberFormat(locale(), {style:'currency', currency:'EUR'}).format(n);
 const names = {spar:'SPAR', billa:'BILLA', hofer:'HOFER', penny:'PENNY', lidl:'Lidl'};
 let selected = 'all', category = 'all', page = 1, lastState = null, request = 0, searchTimer, lastSignature = '';
-let view = location.hash === '#flugblatt' ? 'flyers' : location.hash === '#selected' ? 'selections' : 'catalog', flyersState = null, flyersLoading = false;
+let view = location.hash === '#shopping' ? 'shopping' : location.hash === '#flugblatt' ? 'flyers' : location.hash === '#selected' ? 'selections' : 'catalog', flyersState = null, flyersLoading = false;
 let selection='sweet_drinks', detailFilters={};
 let comparisonOpen=false, comparisonRequest=0;
 let productController=null, comparisonController=null;
@@ -55,14 +55,14 @@ function renderSummary(state) {
 async function loadState() {
   try { const data=await json('/api/state');lastState=data;renderStores(data);renderSummary(data);
     const signature=data.stores.map(s=>[s.status,s.saved,s.count,s.finished_at].join(':')).join('|');
-    if(signature!==lastSignature){lastSignature=signature;loadProducts();}
+    if(signature!==lastSignature){lastSignature=signature;if(view==='shopping')window.loadShopping?.();else loadProducts();}
   } catch(e) {notice(t("Программа недоступна. Откройте «Запустить каталог.cmd», затем обновите страницу."));$('sync-label').textContent=t("Нет соединения");}
 }
 function renderProduct(p) {
   const tr=node('tr');const first=node('td');const product=node('div','product');
   const imageUrl=safeUrl(p.image);if(imageUrl) { const img=node('img','product-image');img.src=imageUrl;img.alt='';img.loading='lazy';img.width=65;img.height=68;img.referrerPolicy='no-referrer';img.onerror=()=>img.replaceWith(node('span','image-placeholder',names[p.store].slice(0,1)));product.append(img); } else product.append(node('span','image-placeholder',names[p.store].slice(0,1)));
   const info=node('div');info.append(node('div','product-name',p.name));if(p.category){const cat=p.category.split(' · ').filter(c=>c!=='Produkte').slice(0,2).join(' · ');info.append(node('div','category',cat));}
-  const tags=productTags(p.details||{});if(tags.length){const list=node('div','product-tags');for(const tag of tags)list.append(node('span','',tag));info.append(list);}product.append(info);first.append(product);
+  const tags=productTags(p.details||{});if(tags.length){const list=node('div','product-tags');for(const tag of tags)list.append(node('span','',tag));info.append(list);}const add=node('button','text-button shopping-add',t('В список'));add.onclick=()=>{if(window.addShoppingProduct?.(p)){add.textContent=t('Добавлено');setTimeout(()=>{add.textContent=t('В список');},1500);}};info.append(add);product.append(info);first.append(product);
   const store=node('td');store.append(node('span','store-badge symbol-'+p.store,names[p.store]));
   const unit=node('td','unit',p.unit||t("Не указано"));
   const quantity=p.quantity||{},basis=$('price-basis').value,comparing=basis!=='pack'&&quantity.measure===basis&&quantity.unit_price;
@@ -121,7 +121,7 @@ function resetQuantityFilters(){ $('price-basis').value='pack';$('package-size')
 function defaultComparisonBasis(){return $('price-basis').value!=='pack'?$('price-basis').value:((view==='selections'&&['milk','sweet_drinks','alcohol'].includes(selection))||['drinks','alcohol'].includes(category)?'l':'kg');}
 function productParams(){return new URLSearchParams({store:selected,category,selection:view==='selections'?selection:'',q:$('search').value,period:$('period').value,discount:$('discount-only').checked?'1':'0',sort:$('sort').value,price_basis:$('price-basis').value,package_size:$('package-size').value||'all',page:String(page),...detailFilters});}
 async function loadComparison(){
-  if(!comparisonOpen||view==='flyers')return;
+  if(!comparisonOpen||!['catalog','selections'].includes(view))return;
   comparisonController?.abort();
   comparisonController=new AbortController();
   const id=++comparisonRequest,params=productParams();params.set('price_basis',$('comparison-basis').value);
@@ -163,7 +163,7 @@ function renderQuantityFilters(data){
   $('reset-filters').classList.toggle('hidden',!$('search').value&&!$('discount-only').checked&&!Object.keys(detailFilters).length&&$('period').value==='current'&&basis==='pack'&&selectedSize==='all');
 }
 async function loadProducts() {
-  if(view==='flyers')return;
+  if(!['catalog','selections'].includes(view))return;
   clearTimeout(searchTimer);
   productController?.abort();comparisonController?.abort();
   productController=new AbortController();
@@ -240,26 +240,26 @@ function switchView(next, updateAddress=true) {
   }
   productController?.abort();comparisonController?.abort();
   view=next;request++;comparisonRequest++;$('comparison-basis').value=defaultComparisonBasis();
-  for(const id of ['catalog','selections','flyers']) {
+  for(const id of ['catalog','selections','flyers','shopping']) {
     const active=id===view;
     $(id+'-tab').classList.toggle('selected',active);
     $(id+'-tab').setAttribute('aria-selected',String(active));
     $(id+'-tab').tabIndex=active?0:-1;
   }
-  $('catalog-view').classList.toggle('hidden',view==='flyers');$('flyers-view').classList.toggle('hidden',view!=='flyers');
+  $('shopping-view').classList.toggle('hidden',view!=='shopping');$('catalog-view').classList.toggle('hidden',!['catalog','selections'].includes(view));$('flyers-view').classList.toggle('hidden',view!=='flyers');
   $('catalog-view').setAttribute('aria-labelledby',view==='selections'?'selections-tab':'catalog-tab');
   $('selections-panel').classList.toggle('hidden',view!=='selections');$('categories').classList.toggle('hidden',view==='selections');
   $('period').closest('label').classList.toggle('hidden',view==='selections');$('period').disabled=view==='selections';
   productHeading();
-  if(updateAddress)history.replaceState(null,'',view==='flyers'?'#flugblatt':view==='selections'?'#selected':location.pathname);
+  if(updateAddress)history.replaceState(null,'',view==='shopping'?'#shopping':view==='flyers'?'#flugblatt':view==='selections'?'#selected':location.pathname);
   if(lastState){renderStores(lastState);renderSummary(lastState);}
-  if(view==='flyers')loadFlyers(true);else if(lastState)loadProducts();
+  if(view==='shopping')window.loadShopping?.();else if(view==='flyers')loadFlyers(true);else if(lastState)loadProducts();
 }
-for(const id of ['catalog','selections','flyers']) {
+for(const id of ['catalog','selections','flyers','shopping']) {
   $(id+'-tab').onclick=()=>switchView(id);
   $(id+'-tab').onkeydown=e=>{
     if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
-    e.preventDefault();const tabs=['catalog','selections','flyers'];const next=e.key==='Home'?tabs[0]:e.key==='End'?tabs[2]:tabs[(tabs.indexOf(view)+(e.key==='ArrowRight'?1:2))%3];
+    e.preventDefault();const tabs=['catalog','selections','flyers','shopping'];const next=e.key==='Home'?tabs[0]:e.key==='End'?tabs.at(-1):tabs[(tabs.indexOf(view)+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length];
     switchView(next);$(next+'-tab').focus();
   };
 }
@@ -334,7 +334,7 @@ async function startFlyerRefresh(store) {
   } catch(e) {$('flyer-message').textContent=e.message;$('flyer-message').className='message';$('refresh-flyers').disabled=false;}
 }
 $('refresh-flyers').onclick=()=>startFlyerRefresh(selected);
-window.addEventListener('hashchange',()=>switchView(location.hash==='#flugblatt'?'flyers':location.hash==='#selected'?'selections':'catalog',false));
+window.addEventListener('hashchange',()=>switchView(location.hash==='#shopping'?'shopping':location.hash==='#flugblatt'?'flyers':location.hash==='#selected'?'selections':'catalog',false));
 switchView(view,false);
 (async()=>{await loadState();await loadFlyers(view==='flyers');})();
 setInterval(()=>{loadState();if(view==='flyers'||flyersState?.busy)loadFlyers(view==='flyers');},4000);
@@ -345,6 +345,6 @@ window.addEventListener('languagechange', () => {
   $('compare-stores').textContent = comparisonOpen ? t('Скрыть сравнение') : t('Сравнить магазины');
   renderFlyers();
   // Read the local catalogue without triggering a download from the stores.
-  if (view !== 'flyers') loadProducts();
+  if (['catalog','selections'].includes(view)) loadProducts();
   window.loadOffers?.();
 });

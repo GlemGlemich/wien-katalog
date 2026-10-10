@@ -8,6 +8,7 @@
 <link href="/favicon.svg" rel="icon"/><link href="/style.css" rel="stylesheet"/>
 <script defer="" src="/i18n.js"></script><script defer="" src="/app.js"></script>
 <script defer="" src="/offers.js"></script>
+<script defer="" src="/shopping.js"></script>
 </head>
 <body>
 <header class="topbar">
@@ -27,6 +28,7 @@
 <button aria-controls="catalog-view" aria-selected="true" class="view-tab selected" data-i18n="Каталог товаров" id="catalog-tab" role="tab">Каталог товаров</button>
 <button aria-controls="catalog-view" aria-selected="false" class="view-tab" data-i18n="Выбранные продукты" id="selections-tab" role="tab" tabindex="-1">Выбранные продукты</button>
 <button aria-controls="flyers-view" aria-selected="false" class="view-tab" id="flyers-tab" role="tab" tabindex="-1"><span data-i18n="Акции">Акции </span><span class="tab-caption">Flugblatt</span><span class="tab-count" id="flyers-tab-count">—</span></button>
+<button aria-controls="shopping-view" aria-selected="false" class="view-tab" id="shopping-tab" role="tab" tabindex="-1"><span data-i18n="Список покупок">Список покупок</span><span class="tab-count" id="shopping-tab-count">0</span></button>
 </nav>
 <div aria-labelledby="catalog-tab" id="catalog-view" role="tabpanel">
 <div class="heading">
@@ -116,6 +118,33 @@
 </div>
 <details class="flyer-sources"><summary><span data-i18n="Проверка источников">Проверка источников </span><span id="flyer-source-status"></span></summary><div id="flyer-sources-list"></div></details>
 <footer><p data-i18n="Срок на карточке относится ко всему выпуску. У отдельных товаров могут быть другие даты, условия покупки, ограничения по количеству или скидки по карте магазина.">Срок на карточке относится ко всему выпуску. У отдельных товаров могут быть другие даты, условия покупки, ограничения по количеству или скидки по карте магазина.</p><p data-i18n="Для SPAR и BILLA выбираем выпуски Вены. Для остальных магазинов показываем австрийские выпуски; предложения конкретного филиала могут отличаться. Будущие и завершённые выпуски здесь не показываются.">Для SPAR и BILLA выбираем выпуски Вены. Для остальных магазинов показываем австрийские выпуски; предложения конкретного филиала могут отличаться. Будущие и завершённые выпуски здесь не показываются.</p></footer>
+</div>
+<div id="shopping-view" class="hidden" role="tabpanel" aria-labelledby="shopping-tab">
+  <div class="heading"><div><div class="eyebrow" data-i18n="ПЛАНИРУЕМ ПОКУПКИ">ПЛАНИРУЕМ ПОКУПКИ</div><h1 data-i18n="Список покупок">Список покупок</h1><p class="subtitle" data-i18n="Сколько стоит ваш список в одном или двух магазинах">Сколько стоит ваш список в одном или двух магазинах</p></div></div>
+  <p class="basket-note" data-i18n="Расчёт по сохранённым ценам сайтов всех пяти магазинов. Цены флюгблаттов, карты и купоны не включены. Pfand и дорога оплачиваются отдельно.">Расчёт по сохранённым ценам сайтов всех пяти магазинов. Цены флюгблаттов, карты и купоны не включены. Pfand и дорога оплачиваются отдельно.</p>
+  <section class="catalog basket-editor" aria-labelledby="basket-add-title">
+    <h2 id="basket-add-title" data-i18n="Что нужно купить?">Что нужно купить?</h2>
+    <form id="basket-form" class="basket-form">
+      <label class="facet-field basket-query"><span data-i18n="Продукт или название с сайта магазина">Продукт или название с сайта магазина</span><input id="basket-query" required minlength="2" maxlength="160" autocomplete="off" data-i18n-placeholder="Молоко, яйца, кола или Milch" placeholder="Молоко, яйца, кола или Milch"></label>
+      <label class="facet-field basket-amount"><span data-i18n="Количество">Количество</span><input id="basket-amount" type="number" min="0.001" max="10000" step="any" value="1" required></label>
+      <label class="facet-field"><span data-i18n="Единица">Единица</span><select id="basket-unit"><option value="l" data-i18n="л">л</option><option value="kg" data-i18n="кг">кг</option><option value="pcs" data-i18n="шт.">шт.</option><option value="pack" data-i18n="упаковки">упаковки</option></select></label>
+      <button class="primary" type="submit" data-i18n="Добавить">Добавить</button>
+    </form>
+    <div class="basket-examples"><span data-i18n="Быстро добавить:">Быстро добавить:</span><button class="secondary" data-preset="milk" data-i18n="Молоко · 1 л">Молоко · 1 л</button><button class="secondary" data-preset="eggs" data-i18n="Яйца · 10 шт.">Яйца · 10 шт.</button><button class="secondary" data-preset="cola" data-i18n="Кола · 2 л">Кола · 2 л</button></div>
+    <p class="basket-note" data-i18n="Общий запрос выбирает самый дешёвый подходящий товар; бренды могут отличаться. Кнопка «В список» в каталоге добавляет конкретный товар указанного магазина.">Общий запрос выбирает самый дешёвый подходящий товар; бренды могут отличаться. Кнопка «В список» в каталоге добавляет конкретный товар указанного магазина.</p>
+    <div id="basket-items"></div>
+    <p id="basket-empty" class="basket-note" data-i18n="Список пуст. Добавьте продукты выше или из каталога.">Список пуст. Добавьте продукты выше или из каталога.</p>
+    <p id="basket-storage" class="basket-note" role="status"></p>
+  </section>
+  <div class="basket-actions"><label class="facet-field"><span data-i18n="Сколько магазинов можно посетить">Сколько магазинов можно посетить</span><select id="basket-limit"><option value="1" data-i18n="Один магазин">Один магазин</option><option value="2" data-i18n="До двух магазинов">До двух магазинов</option></select></label><button id="basket-calculate" class="secondary" data-i18n="Пересчитать по сохранённым ценам">Пересчитать по сохранённым ценам</button></div>
+  <p id="basket-status" class="basket-note" role="status" aria-live="polite"></p>
+  <section id="basket-results" class="hidden" aria-label="Расчёт списка" data-i18n-aria-label="Расчёт списка">
+    <div id="basket-summary" class="basket-summary"></div>
+    <p id="basket-saving" class="basket-note"></p>
+    <section class="catalog basket-plan"><h2 data-i18n="Что и где покупать">Что и где покупать</h2><div id="basket-plan"></div></section>
+    <section class="catalog basket-store-section"><h2 data-i18n="Стоимость в каждом магазине">Стоимость в каждом магазине</h2><div id="basket-stores"></div></section>
+    <p class="basket-note" data-i18n="Покупаем целые упаковки с учётом минимального количества. Весовые товары рассчитаны приблизительно. Непонятные условия и неизвестный размер исключаются из расчёта; отсутствие результата не означает отсутствие товара в магазине.">Покупаем целые упаковки с учётом минимального количества. Весовые товары рассчитаны приблизительно. Непонятные условия и неизвестный размер исключаются из расчёта; отсутствие результата не означает отсутствие товара в магазине.</p>
+  </section>
 </div>
 </main>
 </div>

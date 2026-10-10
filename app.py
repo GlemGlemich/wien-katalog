@@ -26,6 +26,7 @@ from selections import SELECTIONS, SELECTION_VERSION, FACETS, selection_flags, p
 from quantities import QUANTITY_VERSION, product_quantity, size_label
 from flyers import SOURCES as FLYER_SOURCES, read_flyers, current as current_flyer
 import offers
+import shopping
 
 ROOT = Path(__file__).resolve().parent
 DB = ROOT / 'data' / 'catalog.sqlite3'
@@ -504,7 +505,7 @@ class Handler(BaseHTTPRequestHandler):
                 if preview is None:
                     return self.respond({'error':'Страница буклета недоступна'},404)
                 return self.respond(preview, kind='image/jpeg')
-            files = {'/': 'index.html', '/app.js': 'app.js', '/i18n.js': 'i18n.js', '/offers.js': 'offers.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg'}
+            files = {'/': 'index.html', '/app.js': 'app.js', '/i18n.js': 'i18n.js', '/offers.js': 'offers.js', '/shopping.js': 'shopping.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg'}
             if target.path not in files:
                 return self.respond({'error': 'Не найдено'}, 404)
             path = ROOT / 'static' / files[target.path]
@@ -521,13 +522,19 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self.local_request() or not secrets.compare_digest(self.headers.get('X-Local-Token', ''), TOKEN):
             return self.respond({'error': 'Обновите страницу и повторите действие'}, 403)
-        if self.path not in ('/api/refresh', '/api/flyers/refresh'):
+        if self.path not in ('/api/refresh', '/api/flyers/refresh', '/api/shopping/quote'):
             return self.respond({'error': 'Не найдено'}, 404)
         try:
             length = int(self.headers.get('Content-Length', '0'))
-            if length > 1024:
+            if length < 1 or length > (32768 if self.path == '/api/shopping/quote' else 1024):
                 return self.respond({'error': 'Слишком большой запрос'}, 413)
             data = json.loads(self.rfile.read(length))
+            if not isinstance(data, dict):
+                raise ValueError('Invalid request')
+            if self.path == '/api/shopping/quote':
+                with connect() as db:
+                    result = shopping.calculate(db, data.get('items'), _vienna_date(time.time()))
+                return self.respond(result)
             store = data.get('store', 'all')
             if store != 'all' and store not in STORES:
                 raise ValueError('Магазин не найден')

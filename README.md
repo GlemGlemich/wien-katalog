@@ -1,6 +1,6 @@
 # Price Tag — Vienna grocery catalogue
 
-A local catalogue of products, prices and current promotional leaflets from **SPAR, BILLA, HOFER, PENNY and Lidl Austria**. Browse saved prices, filter products, compare stores and inspect offers extracted from official Flugblatt PDFs. Shopping lists and route planning are not implemented.
+A local catalogue of products, prices and current promotional leaflets from **SPAR, BILLA, HOFER, PENNY and Lidl Austria**. Browse saved prices, filter products, compare stores and inspect offers extracted from official Flugblatt PDFs. Build a shopping list and compare its estimated cost across one or two stores. Route planning is not implemented.
 
 ## Getting started
 
@@ -28,6 +28,18 @@ Use the **Русский / English** selector in the top bar. Russian is the def
 Navigation, filters, selections, comparisons, leaflet controls, statuses, application messages and accessible labels are translated. Number and date formatting follows the language; dates remain in the **Europe/Vienna** time zone and prices in **EUR**. Switching keeps your section, store, search and filters and does not download prices from retailer websites.
 
 Original retailer product names, categories and promotional wording remain as published, usually in German. App-generated purchase conditions are translated. Translations live in `static/i18n.js`; no translation service, AI API or tokens are required.
+
+## Shopping list
+
+Open **Shopping list** and add a product name, quantity and unit: litres, kilograms, individual items or packs. Quick buttons add milk, ten eggs or two litres of cola. You can edit or remove lines. The list and the choice of one or up to two stores are saved in this browser; no account is required. The list supports up to 30 lines.
+
+Generic milk, lactose-free milk, eggs and cola searches understand Russian, English and German. Other searches match the original product name. General searches may select different brands, fat contents or sizes; review the actual products in the result. **Add to list** in the catalogue instead adds that exact product from its specific store. It does not claim that other stores carry an identical product.
+
+Estimates use active saved online catalogue prices valid today across all five stores, regardless of the sidebar store filter. They do not fetch retailer websites. Leaflet prices and loyalty/coupon prices are excluded; Pfand deposits and travel costs are extra. Each selected product shows its original link, quantity, price check time and any purchase conditions. Stale check times remain marked.
+
+The calculation buys whole packs and meets known minimum quantities: ten eggs may require two six-egg packs, for example. It compares the total needed for the requested amount, not only the price per kg/litre. Known multipack rules are respected without applying an already included discount twice. A published single-item price can be used when it is cheaper for the requested quantity. Unknown conditions or unavailable pack sizes are excluded when they prevent a reliable estimate. Variable-weight products can be estimated by kg when a unit price is known. Retailer unit prices based on drained weight do not replace fixed-pack checkout prices.
+
+The result shows complete totals for the cheapest single store and the cheapest allocation across up to two stores. For each shopping-list line it chooses one product and one store; it does not combine different sizes or brands within a line. A second store is not added unless it helps. All five individual-store results remain available. Missing items produce an explicitly labelled partial subtotal and never count as free products; incomplete lists do not receive a full-total recommendation. A missing result does not imply that the product is out of stock.
 
 ## Catalogue and product selections
 
@@ -120,10 +132,10 @@ Retailer interface changes may require updates to `parsers.py` or `sources.py`. 
 Run the Python regression tests:
 
 ```sh
-python -m unittest -v test_catalog test_product_details test_quantities test_alcohol test_network test_flyers test_offers
+python -m unittest -v test_catalog test_product_details test_quantities test_alcohol test_network test_flyers test_offers test_shopping
 ```
 
-These cover conditional prices, weights, validity, combined filters, comparisons and data preservation after network failures. Extraction tests use real-page text and coordinates without network requests.
+These cover conditional prices, weights, validity, combined filters, store comparisons, shopping-list totals and data preservation after network failures. Extraction tests use real-page text and coordinates without network requests.
 
 Run the language checks with Node.js:
 
