@@ -72,7 +72,7 @@ test('translates interpolated UI and server messages without changing retailer w
 
 test('every static and scripted UI phrase has an English translation', () => {
   const app = browser('en'), phrases = new Set();
-  for (const filename of ['app.js', 'offers.js', 'shopping.js']) {
+  for (const filename of ['app.js', 'offers.js', 'shopping.js', 'matching.js']) {
     const source = fs.readFileSync(path.join(__dirname, 'static', filename), 'utf8');
     for (const match of source.matchAll(/\bt\(("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g)) {
       const phrase = vm.runInNewContext(match[1]);

@@ -62,7 +62,11 @@ function renderProduct(p) {
   const tr=node('tr');const first=node('td');const product=node('div','product');
   const imageUrl=safeUrl(p.image);if(imageUrl) { const img=node('img','product-image');img.src=imageUrl;img.alt='';img.loading='lazy';img.width=65;img.height=68;img.referrerPolicy='no-referrer';img.onerror=()=>img.replaceWith(node('span','image-placeholder',names[p.store].slice(0,1)));product.append(img); } else product.append(node('span','image-placeholder',names[p.store].slice(0,1)));
   const info=node('div');info.append(node('div','product-name',p.name));if(p.category){const cat=p.category.split(' · ').filter(c=>c!=='Produkte').slice(0,2).join(' · ');info.append(node('div','category',cat));}
-  const tags=productTags(p.details||{});if(tags.length){const list=node('div','product-tags');for(const tag of tags)list.append(node('span','',tag));info.append(list);}const add=node('button','text-button shopping-add',t('В список'));add.onclick=()=>{if(window.addShoppingProduct?.(p)){add.textContent=t('Добавлено');setTimeout(()=>{add.textContent=t('В список');},1500);}};info.append(add);product.append(info);first.append(product);
+  const tags=productTags(p.details||{});if(tags.length){const list=node('div','product-tags');for(const tag of tags)list.append(node('span','',tag));info.append(list);}
+  const actions=node('div','product-actions'),add=node('button','text-button shopping-add',t('В список'));
+  add.onclick=()=>{if(window.addShoppingProduct?.(p)){add.textContent=t('Добавлено');setTimeout(()=>{add.textContent=t('В список');},1500);}};
+  const compare=node('button','text-button product-match',t('В других магазинах'));compare.setAttribute('aria-haspopup','dialog');compare.onclick=()=>window.openProductMatches?.(p);
+  actions.append(add,compare);info.append(actions);product.append(info);first.append(product);
   const store=node('td');store.append(node('span','store-badge symbol-'+p.store,names[p.store]));
   const unit=node('td','unit',p.unit||t("Не указано"));
   const quantity=p.quantity||{},basis=$('price-basis').value,comparing=basis!=='pack'&&quantity.measure===basis&&quantity.unit_price;

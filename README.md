@@ -61,6 +61,14 @@ Classification uses retailer categories first, then product names when necessary
 
 ## Reading and comparing prices
 
+Click **Other stores** on a catalogue or product-selection row to compare that specific product without leaving your filters. The window separates **Barcode matches** from **Similar products**. Choose the published pack price or price per kg/litre, filter to the same total weight/volume, hide alternatives, or add an offer to the shopping list. The reference product remains visible with its price and collection date. Alternatives come from active saved website prices valid today in the other four stores, regardless of the sidebar filter; opening the window makes no retailer requests.
+
+A confirmed match requires one explicit, valid GTIN/EAN from each source. Retailer SKUs, product URLs and matching names are never treated as barcodes. Leading-zero GTIN formats are normalised; check digits are validated. [GS1 restricted-circulation prefixes](https://www.gs1.org/standards/id-keys/company-prefix) are excluded from cross-store identity. Multiple variant codes and conflicting known pack weights remain unconfirmed. The same total weight does not establish identical packaging, flavour or composition.
+
+**Current limitation:** the saved catalogue generally has no explicit barcodes. Similar-name alternatives work immediately; confirmed matches appear only when both source records provide a usable barcode. Importers retain explicit barcode and brand fields on subsequent price downloads when published. This feature does not fetch individual product detail pages to fill missing codes and does not promise complete cross-store matching.
+
+Similar products are shortlisted by shared name/brand words within the same broad category, using a local index (up to 75 candidates per other store). After weight/unit filters, up to three relevant alternatives per store are displayed and sorted by the selected price. This is a bounded shortlist, not a guaranteed cheapest-product search. Purchase conditions, single-item prices, separate loyalty offers and old check times stay visible; conditional prices are not converted into unconditional savings. Unknown unit prices are excluded from kg/litre sorting. A missing match does not mean a store has no stock. Adding an offer to the shopping list still selects that specific store item.
+
 Choose **Compare prices by → Per 1 kg / Per 1 l** to highlight the unit price and sort from lowest to highest. The original website price for the pack or stated quantity stays visible. Kilograms and litres are never mixed; products without a known price for the chosen unit are excluded from that mode.
 
 **Pack weight / volume** shows sizes and counts, such as 250 g, 500 g, 1 kg or 1 l. Sizes refer to the entire pack: 2 × 250 g counts as 500 g. Variable-weight products are separate, even when priced per kg. Ranges, alternative sizes such as 120/150 g and approximate weights are not presented as exact sizes.
@@ -132,10 +140,10 @@ Retailer interface changes may require updates to `parsers.py` or `sources.py`. 
 Run the Python regression tests:
 
 ```sh
-python -m unittest -v test_catalog test_product_details test_quantities test_alcohol test_network test_flyers test_offers test_shopping
+python -m unittest -v test_catalog test_product_details test_quantities test_alcohol test_network test_flyers test_offers test_shopping test_matching
 ```
 
-These cover conditional prices, weights, validity, combined filters, store comparisons, shopping-list totals and data preservation after network failures. Extraction tests use real-page text and coordinates without network requests.
+These cover conditional prices, weights, validity, combined filters, store comparisons, barcode identity, matching-index migrations, shopping-list totals and data preservation after network failures. Extraction tests use real-page text and coordinates without network requests.
 
 Run the language checks with Node.js:
 

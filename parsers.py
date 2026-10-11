@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from html import unescape
 from html.parser import HTMLParser
 from urllib.parse import urljoin
+from matching import retailer_identity
 
 
 class _NuxtScript(HTMLParser):
@@ -143,6 +144,7 @@ def parse_hofer(html):
         if product.get('onSaleDate'):
             conditions.append('Пока товар есть в наличии')
         result[sku] = {
+            **retailer_identity(product, product.get('brandName')),
             'store': 'hofer', 'id': sku,
             'name': ' '.join(filter(None, [product.get('brandName'), product['name']])),
             'price': round(amount / 100, 2),
@@ -188,6 +190,7 @@ def parse_lidl(html):
                 regular = None
             identity = str(product['productId']) + suffix
             result[identity] = {
+                **retailer_identity(product),
                 'store': 'lidl', 'id': identity, 'name': product['fullTitle'],
                 'price': round(amount, 2), 'regular_price': regular,
                 'unit': package.split('(')[0].strip() or None,
@@ -255,6 +258,7 @@ def parse_rewe(data, store):
         unit_price = current.get('perStandardizedQuantity')
         base_unit = ' '.join(str(v) for v in [prices.get('basePriceFactor'), prices.get('baseUnitShort')] if v)
         row = {
+            **retailer_identity(product),
             'store': store, 'id': product['sku'], 'name': product['name'],
             'price': value / 100, 'regular_price': prior / 100 if prior and prior != value else None,
             'single_price': standard / 100 if quantity > 1 and standard else None,
@@ -298,6 +302,7 @@ def parse_spar(data):
         if p.get('item-type') == 'WeightProduct':
             conditions.append('Весовой товар; цена за указанное количество')
         result.append({
+            **retailer_identity(p, p.get('ecr-brand') or p.get('brand')),
             'store': 'spar', 'id': ident,
             'name': ' '.join(v for v in [p.get('title'), p.get('short-description-2') or p.get('short-description')] if v),
             'price': value, 'regular_price': regular if regular and regular != value else None,

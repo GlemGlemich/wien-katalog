@@ -27,6 +27,7 @@ from quantities import QUANTITY_VERSION, product_quantity, size_label
 from flyers import SOURCES as FLYER_SOURCES, read_flyers, current as current_flyer
 import offers
 import shopping
+import matching
 
 ROOT = Path(__file__).resolve().parent
 DB = ROOT / 'data' / 'catalog.sqlite3'
@@ -142,6 +143,7 @@ def initialize():
         db.execute("UPDATE imports SET status='interrupted', error='Загрузка была прервана. Сохранённые товары доступны; запустите обновление.' WHERE status='running'")
         db.execute("UPDATE flyer_imports SET status='error', error='Проверка флюгблаттов была прервана. Повторите обновление.' WHERE status='running'")
         offers.initialize(db)
+        matching.initialize(db)
 
 
 def state():
@@ -161,6 +163,7 @@ def state():
 
 def save_page(store, rows, run, source_url):
     stamp = now()
+    rows = list(rows)
     values = []
     for row in rows:
         if not row.get('id') or not row.get('name'):
@@ -185,6 +188,7 @@ def save_page(store, rows, run, source_url):
           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(store,id) DO UPDATE SET
           name=excluded.name,search=excluded.search,price=excluded.price,payload=excluded.payload,
           checked_at=excluded.checked_at,run=excluded.run,active=1,valid_from=excluded.valid_from,valid_to=excluded.valid_to,group_id=excluded.group_id,selection_flags=excluded.selection_flags,details=excluded.details,quantity=excluded.quantity''', values)
+        matching.index_products(db, ({**row, 'store': store} for row in rows))
 
 
 def import_store(store):
@@ -492,6 +496,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(products(parse_qs(target.query)))
             if target.path == '/api/comparison':
                 return self.respond(products(parse_qs(target.query),comparison=True))
+            if target.path == '/api/product-matches':
+                params = parse_qs(target.query)
+                with connect() as db:
+                    result = matching.compare(db, params.get('store', [''])[0], params.get('id', [''])[0],
+                                              _vienna_date(time.time()), STORES)
+                if result is None:
+                    return self.respond({'error': 'Товар не найден'}, 404)
+                return self.respond(result)
             if target.path == '/api/flyers':
                 return self.respond(flyer_state())
             if target.path == '/api/offers':
@@ -505,7 +517,7 @@ class Handler(BaseHTTPRequestHandler):
                 if preview is None:
                     return self.respond({'error':'Страница буклета недоступна'},404)
                 return self.respond(preview, kind='image/jpeg')
-            files = {'/': 'index.html', '/app.js': 'app.js', '/i18n.js': 'i18n.js', '/offers.js': 'offers.js', '/shopping.js': 'shopping.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg'}
+            files = {'/': 'index.html', '/app.js': 'app.js', '/i18n.js': 'i18n.js', '/offers.js': 'offers.js', '/shopping.js': 'shopping.js', '/matching.js': 'matching.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg'}
             if target.path not in files:
                 return self.respond({'error': 'Не найдено'}, 404)
             path = ROOT / 'static' / files[target.path]

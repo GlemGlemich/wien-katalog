@@ -9,6 +9,7 @@
 <script defer="" src="/i18n.js"></script><script defer="" src="/app.js"></script>
 <script defer="" src="/offers.js"></script>
 <script defer="" src="/shopping.js"></script>
+<script defer="" src="/matching.js"></script>
 </head>
 <body>
 <header class="topbar">
@@ -148,5 +149,22 @@
 </div>
 </main>
 </div>
+<dialog id="product-matches" class="match-dialog" aria-labelledby="match-title" aria-describedby="match-intro">
+  <header class="match-heading"><h2 id="match-title" data-i18n="Товар в других магазинах">Товар в других магазинах</h2><button id="match-close" class="secondary" type="button" data-i18n="Закрыть" autofocus>Закрыть</button></header>
+  <p id="match-intro" class="match-note" data-i18n="Сравнение по сохранённым ценам сайтов на сегодня. Проверяйте дату цены и условия покупки. Pfand оплачивается отдельно.">Сравнение по сохранённым ценам сайтов на сегодня. Проверяйте дату цены и условия покупки. Pfand оплачивается отдельно.</p>
+  <p id="match-status" class="match-note" role="status" aria-live="polite"></p>
+  <div id="match-content" class="hidden">
+    <div id="match-reference" class="match-reference"></div>
+    <p id="match-identity" class="match-note"></p>
+    <div class="match-controls">
+      <label class="facet-field"><span data-i18n="Сравнивать по">Сравнивать по</span><select id="match-sort"></select></label>
+      <label><input id="match-size" type="checkbox"><span data-i18n="Тот же вес / объём">Тот же вес / объём</span></label>
+      <label><input id="match-similar" type="checkbox" checked><span data-i18n="Показывать похожие">Показывать похожие</span></label>
+    </div>
+    <section aria-labelledby="match-exact-title"><h3 id="match-exact-title" data-i18n="Совпадения по штрихкоду">Совпадения по штрихкоду</h3><div id="match-exact"></div></section>
+    <section id="match-alternatives" aria-labelledby="match-similar-title"><h3 id="match-similar-title" data-i18n="Похожие товары">Похожие товары</h3><p class="match-note" data-i18n="Подобраны по названию. Бренд, вкус, состав и упаковка могут отличаться. Показано до трёх вариантов на магазин.">Подобраны по названию. Бренд, вкус, состав и упаковка могут отличаться. Показано до трёх вариантов на магазин.</p><div id="match-list"></div></section>
+    <p id="match-missing" class="match-note"></p>
+  </div>
+</dialog>
 </body>
 </html>
