@@ -66,7 +66,8 @@ function renderProduct(p) {
   const actions=node('div','product-actions'),add=node('button','text-button shopping-add',t('В список'));
   add.onclick=()=>{if(window.addShoppingProduct?.(p)){add.textContent=t('Добавлено');setTimeout(()=>{add.textContent=t('В список');},1500);}};
   const compare=node('button','text-button product-match',t('В других магазинах'));compare.setAttribute('aria-haspopup','dialog');compare.onclick=()=>window.openProductMatches?.(p);
-  actions.append(add,compare);info.append(actions);product.append(info);first.append(product);
+  const history=node('button','text-button product-history',t('История цен'));history.setAttribute('aria-haspopup','dialog');history.onclick=()=>window.openPriceHistory?.(p);
+  actions.append(add,compare,history);info.append(actions);product.append(info);first.append(product);
   const store=node('td');store.append(node('span','store-badge symbol-'+p.store,names[p.store]));
   const unit=node('td','unit',p.unit||t("Не указано"));
   const quantity=p.quantity||{},basis=$('price-basis').value,comparing=basis!=='pack'&&quantity.measure===basis&&quantity.unit_price;

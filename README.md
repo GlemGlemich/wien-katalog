@@ -61,6 +61,20 @@ Classification uses retailer categories first, then product names when necessary
 
 ## Reading and comparing prices
 
+### Price history
+
+Click **Price history** on any catalogue or product-selection row. A chart and dated observations show the website price for that product in that store over **30 days**, **90 days** or **All history**. Dates use Vienna time. No extra retailer requests or AI tokens are needed.
+
+On first launch after this feature is installed, each existing product starts with its saved price and original check timestamp. Earlier prices cannot be reconstructed. Crossed-out regular prices and separate loyalty offers are retained as source context, never invented as past observations. The chart shows the main website price for the stated pack/quantity, including any stated purchase conditions; it does not imply an unconditional single-pack price.
+
+Subsequent successful page imports record changes to price, pack, name, validity or purchase conditions in the same database transaction as the catalogue update. Identical consecutive observations are compacted to their first and last check times. A later return to an earlier price creates a new record. Failed downloads do not advance history, while successfully saved pages of a partial import remain valid observations. Inactive products retain their history.
+
+The chart plots actual check timestamps rather than guessed change dates or a continuous record of availability. It only connects observations with the same name, stated pack, weight type and purchase conditions. The lowest-price summary uses that same conservative comparison against the latest displayed record; different packs, membership conditions and unknown quantities are not silently compared as savings. Original single-item prices, offer dates and loyalty prices remain visible below the chart. Unit-price history and leaflet history are not included.
+
+The selected period is a rolling observation window. Up to the latest 500 records are displayed, with an explicit notice if there are more; older records remain in the local database. Summary values refer only to displayed records. Equal-price checks may have been compacted, so the table can show an older first-check date while the chart plots only the actual checks inside the period. History grows when you refresh the catalogue and is stored in the local SQLite database, not GitHub.
+
+### Comparing offers
+
 Click **Other stores** on a catalogue or product-selection row to compare that specific product without leaving your filters. The window separates **Barcode matches** from **Similar products**. Choose the published pack price or price per kg/litre, filter to the same total weight/volume, hide alternatives, or add an offer to the shopping list. The reference product remains visible with its price and collection date. Alternatives come from active saved website prices valid today in the other four stores, regardless of the sidebar filter; opening the window makes no retailer requests.
 
 A confirmed match requires one explicit, valid GTIN/EAN from each source. Retailer SKUs, product URLs and matching names are never treated as barcodes. Leading-zero GTIN formats are normalised; check digits are validated. [GS1 restricted-circulation prefixes](https://www.gs1.org/standards/id-keys/company-prefix) are excluded from cross-store identity. Multiple variant codes and conflicting known pack weights remain unconfirmed. The same total weight does not establish identical packaging, flavour or composition.
@@ -140,10 +154,10 @@ Retailer interface changes may require updates to `parsers.py` or `sources.py`. 
 Run the Python regression tests:
 
 ```sh
-python -m unittest -v test_catalog test_product_details test_quantities test_alcohol test_network test_flyers test_offers test_shopping test_matching
+python -m unittest -v test_catalog test_product_details test_quantities test_alcohol test_network test_flyers test_offers test_shopping test_matching test_price_history
 ```
 
-These cover conditional prices, weights, validity, combined filters, store comparisons, barcode identity, matching-index migrations, shopping-list totals and data preservation after network failures. Extraction tests use real-page text and coordinates without network requests.
+These cover conditional prices, weights, validity, combined filters, store comparisons, barcode identity, matching-index migrations, shopping-list totals, price-history baselines and atomic writes, and data preservation after network failures. Extraction tests use real-page text and coordinates without network requests.
 
 Run the language checks with Node.js:
 

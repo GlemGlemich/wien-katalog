@@ -10,6 +10,7 @@
 <script defer="" src="/offers.js"></script>
 <script defer="" src="/shopping.js"></script>
 <script defer="" src="/matching.js"></script>
+<script defer="" src="/history.js"></script>
 </head>
 <body>
 <header class="topbar">
@@ -164,6 +165,21 @@
     <section aria-labelledby="match-exact-title"><h3 id="match-exact-title" data-i18n="Совпадения по штрихкоду">Совпадения по штрихкоду</h3><div id="match-exact"></div></section>
     <section id="match-alternatives" aria-labelledby="match-similar-title"><h3 id="match-similar-title" data-i18n="Похожие товары">Похожие товары</h3><p class="match-note" data-i18n="Подобраны по названию. Бренд, вкус, состав и упаковка могут отличаться. Показано до трёх вариантов на магазин.">Подобраны по названию. Бренд, вкус, состав и упаковка могут отличаться. Показано до трёх вариантов на магазин.</p><div id="match-list"></div></section>
     <p id="match-missing" class="match-note"></p>
+  </div>
+</dialog>
+<dialog id="price-history" class="match-dialog history-dialog" aria-labelledby="history-title" aria-describedby="history-intro">
+  <header class="match-heading"><h2 id="history-title" data-i18n="История цен">История цен</h2><button id="history-close" class="secondary" type="button" data-i18n="Закрыть" autofocus>Закрыть</button></header>
+  <p id="history-product" class="history-product"></p>
+  <p id="history-intro" class="match-note" data-i18n="Цены сайта этого магазина в даты проверки. Между проверками цена неизвестна. Условия акций и упаковка сохраняются; Pfand оплачивается отдельно.">Цены сайта этого магазина в даты проверки. Между проверками цена неизвестна. Условия акций и упаковка сохраняются; Pfand оплачивается отдельно.</p>
+  <nav id="history-period" class="history-period" aria-label="Период истории" data-i18n-aria-label="Период истории"><button class="secondary" type="button" data-days="30" aria-pressed="false" data-i18n="30 дней">30 дней</button><button class="secondary" type="button" data-days="90" aria-pressed="true" data-i18n="90 дней">90 дней</button><button class="secondary" type="button" data-days="0" aria-pressed="false" data-i18n="Вся история">Вся история</button></nav>
+  <p id="history-status" class="match-note" role="status" aria-live="polite"></p>
+  <div id="history-content" class="hidden">
+    <div id="history-summary" class="history-summary"></div>
+    <div id="history-chart" class="history-chart"></div>
+    <p id="history-explanation" class="match-note"></p>
+    <h3 data-i18n="Сохранённые записи">Сохранённые записи</h3>
+    <div id="history-entries"></div>
+    <p class="match-note" data-i18n="Одинаковые записи объединяются: показаны первая и последняя проверки. Перечёркнутая цена не становится прошлой ценой на графике; цены по карте показаны отдельно. История накапливается при обновлении каталога.">Одинаковые записи объединяются: показаны первая и последняя проверки. Перечёркнутая цена не становится прошлой ценой на графике; цены по карте показаны отдельно. История накапливается при обновлении каталога.</p>
   </div>
 </dialog>
 </body>
