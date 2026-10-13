@@ -1,1 +1,2 @@
 pdfplumber>=0.11,<0.12
+truststore>=0.10.5,<0.11; sys_platform == "win32"

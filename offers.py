@@ -15,6 +15,7 @@ from categories import CATEGORIES as CATALOG_CATEGORIES
 CATEGORIES = [(key,label) for key,label in CATALOG_CATEGORIES if key!='alcohol']
 from flyers import current, script_json, https
 from sources import fetch, STORES, network_error_message
+from https_context import https_context
 from offer_model import DRINKS, matches, drink_kind
 from selections import SELECTIONS, selection_flags
 from offer_pdf import read_pdf, parse_pages
@@ -88,7 +89,7 @@ def download(flyer):
     tmp = path.with_suffix('.part')
     try:
         request = urllib.request.Request(url, headers={'User-Agent':'ViennaCatalogue/1.0'})
-        with urllib.request.urlopen(request,timeout=60) as response, tmp.open('wb') as output:
+        with urllib.request.urlopen(request,timeout=60,context=https_context()) as response, tmp.open('wb') as output:
             total = 0
             while chunk := response.read(1024*1024):
                 total += len(chunk)

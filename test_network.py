@@ -30,6 +30,8 @@ class NetworkFailureTests(unittest.TestCase):
         cases = [(certificate_error(10), 'certificate_expired'),
                  (certificate_error(9), 'certificate_not_yet_valid'),
                  (certificate_error(20), 'certificate_invalid'),
+                 (certificate_error(0x800B0101), 'certificate_date_invalid'),
+                 (certificate_error(-2146762495), 'certificate_date_invalid'),
                  (ssl.SSLError(ssl.SSL_ERROR_SSL, 'Handshake failed'), 'tls_error')]
         for error, expected in cases:
             for wrapped in (error, urllib.error.URLError(error)):

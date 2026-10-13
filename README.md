@@ -4,14 +4,21 @@ A local catalogue of products, prices and current promotional leaflets from **SP
 
 ## Getting started
 
-Requires **Python 3.10 or later**. Install the PDF extraction dependencies:
+Requires **Python 3.10 or later**. Install the PDF extraction and HTTPS dependencies:
 
 ```sh
 python -m pip install -r requirements.txt
 python app.py --open
 ```
 
-On Windows, you can also double-click **`Запустить каталог.cmd`** (the catalogue launcher). It uses the bundled Codex Python runtime when available, otherwise the `python` command. Keep the server window open. The app runs at [http://127.0.0.1:8765](http://127.0.0.1:8765). The launcher is checked out with Windows CRLF line endings so Command Prompt reads it correctly. To restart it later, close its Command Prompt window or press Ctrl+C there, then double-click the launcher again.
+On Windows, you can also double-click **`Запустить каталог.cmd`** (the catalogue launcher). It prefers this project's `.venv\Scripts\python.exe`, then the bundled Codex Python runtime, otherwise the `python` command. Install dependencies into the interpreter the launcher uses. To set up an isolated environment on a new Windows checkout:
+
+```bat
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+Keep the server window open. The app runs at [http://127.0.0.1:8765](http://127.0.0.1:8765). The launcher is checked out with Windows CRLF line endings so Command Prompt reads it correctly. To restart it later, close its Command Prompt window or press Ctrl+C there, then double-click the launcher again.
 
 Click **Download prices** to read all five sources. Selecting a store limits the update to that store. Downloads take several minutes; products appear as they arrive and are saved in `data/catalog.sqlite3` between sessions. Internet access is needed for new prices and images. Saved names and prices remain available offline and without the PDF extraction dependency.
 
@@ -149,6 +156,8 @@ The **Python process** needs network access. When internet access is blocked, th
 
 **Certificate errors are not network permission errors.** The catalogue, leaflet list and PDF reader distinguish expired certificates, certificates not yet valid, other verification failures and TLS connection failures. For a certificate date error, first check the computer's date, time and timezone. If these are correct, check for Windows and antivirus updates and restart the computer. Antivirus HTTPS scanning can supply its own certificates; the error does not by itself identify the retailer as the cause. If it persists, the retailer or certificate issuer may need to fix it. Do not disable HTTPS certificate verification. Previously saved data remains available, subject to leaflet offer expiry.
 
+On Windows all catalogue, leaflet and PDF downloads use the native Windows certificate verifier through [truststore](https://truststore.readthedocs.io/en/stable/). This avoids OpenSSL choosing an expired cached intermediate certificate over a currently valid chain. Certificate dates, hostname and trust are still verified; failed verification is never retried with verification disabled. `truststore` is a declared Windows dependency, with no reliance on pip's private packages. Other platforms use Python's default verified TLS context. No Windows certificate-store or antivirus settings are changed.
+
 Retailer requests run locally, avoiding browser CORS restrictions. The server binds to `127.0.0.1`. Updates require a random local session token, SQL queries are parameterised and TLS certificates are verified. Store failures do not erase saved data. Incomplete imports preserve previous products; missing items are hidden only after a complete successful import.
 
 Retailer interface changes may require updates to `parsers.py` or `sources.py`. Errors are shown explicitly; sample prices are never presented as real prices.
@@ -158,7 +167,7 @@ Retailer interface changes may require updates to `parsers.py` or `sources.py`. 
 Run the Python regression tests:
 
 ```sh
-python -m unittest -v test_catalog test_product_details test_quantities test_alcohol test_network test_flyers test_offers test_shopping test_matching test_price_history
+python -m unittest -v test_catalog test_product_details test_quantities test_alcohol test_network test_https_context test_flyers test_offers test_shopping test_matching test_price_history
 ```
 
 These cover conditional prices, weights, validity, combined filters, store comparisons, barcode identity, matching-index migrations, shopping-list totals, price-history baselines and atomic writes, and data preservation after network failures. Extraction tests use real-page text and coordinates without network requests.

@@ -8,6 +8,7 @@ import time
 import urllib.error
 import urllib.request
 from urllib.parse import urlencode
+from https_context import https_context
 from parsers import parse_rewe, parse_spar, parse_hofer, parse_lidl, decode_nuxt
 
 STORES = {
@@ -27,7 +28,10 @@ def network_error_kind(error):
     # blocked the network. Certificate failures may also come from a local
     # antivirus HTTPS scanner, so do not attribute them to the retailer alone.
     if isinstance(error, ssl.SSLCertVerificationError):
-        if getattr(error, 'verify_code', None) == 10:
+        if getattr(error, 'verify_code', None) in (10, 0x800B0101, -2146762495):
+            # CERT_E_EXPIRED is Windows' date-validity error (either end).
+            if getattr(error, 'verify_code', None) != 10:
+                return 'certificate_date_invalid'
             return 'certificate_expired'
         if getattr(error, 'verify_code', None) == 9:
             return 'certificate_not_yet_valid'
@@ -47,6 +51,7 @@ NETWORK_MESSAGES = {
     'unreachable': 'Сеть недоступна для программы. Проверьте подключение и повторите обновление. Сохранённые цены доступны.',
     'certificate_expired': 'Истёк срок сертификата HTTPS. Проверьте дату и время компьютера. Если они верны, проверьте обновления антивируса и повторите позже. Сохранённые данные доступны.',
     'certificate_not_yet_valid': 'Сертификат HTTPS ещё не вступил в силу. Проверьте дату и время компьютера. Сохранённые данные доступны.',
+    'certificate_date_invalid': 'Сертификат HTTPS недействителен на текущую дату. Проверьте дату и время компьютера; если они верны, повторите позже. Сохранённые данные доступны.',
     'certificate_invalid': 'Не удалось проверить сертификат HTTPS. Проверьте обновления Windows и антивируса. Если ошибка остаётся, повторите позже. Сохранённые данные доступны.',
     'tls_error': 'Не удалось установить защищённое HTTPS-соединение. Повторите позже; если ошибка остаётся, проверьте антивирус. Сохранённые данные доступны.',
 }
@@ -60,10 +65,10 @@ def network_error_message(error):
 def fetch(url):
     for attempt in range(3):
         try:
-            # Use standard TLS verification and do not bypass retailer access controls.
+            # Keep certificate, hostname and date verification enabled.
             started = time.monotonic()
             request = urllib.request.Request(url, headers={'Accept-Encoding': 'gzip'})
-            with urllib.request.urlopen(request, timeout=30) as response:
+            with urllib.request.urlopen(request, timeout=30, context=https_context()) as response:
                 chunks = []
                 length = 0
                 while True:
