@@ -3,6 +3,7 @@ import json
 import errno
 import gzip
 import http.client
+import ssl
 import time
 import urllib.error
 import urllib.request
@@ -19,15 +20,41 @@ STORES = {
 
 
 def network_error_kind(error):
-    """Distinguish local access restrictions from temporary site failures."""
+    """Keep TLS/OpenSSL error codes separate from operating-system errno codes."""
     while isinstance(error, urllib.error.URLError) and isinstance(error.reason, BaseException):
         error = error.reason
+    # SSL_ERROR_SSL is 1, just like POSIX EPERM. It does not mean that Windows
+    # blocked the network. Certificate failures may also come from a local
+    # antivirus HTTPS scanner, so do not attribute them to the retailer alone.
+    if isinstance(error, ssl.SSLCertVerificationError):
+        if getattr(error, 'verify_code', None) == 10:
+            return 'certificate_expired'
+        if getattr(error, 'verify_code', None) == 9:
+            return 'certificate_not_yet_valid'
+        return 'certificate_invalid'
+    if isinstance(error, ssl.SSLError):
+        return 'tls_error'
     codes = {getattr(error,'winerror',None),getattr(error,'errno',None)}
     if codes.intersection({10013,errno.EACCES,errno.EPERM}):
         return 'access_denied'
     if codes.intersection({10050,10051,10065,errno.ENETDOWN,errno.ENETUNREACH,errno.EHOSTUNREACH}):
         return 'unreachable'
     return None
+
+
+NETWORK_MESSAGES = {
+    'access_denied': 'Система запретила программе доступ к интернету. Разрешите сетевой доступ и перезапустите каталог. Сохранённые цены доступны.',
+    'unreachable': 'Сеть недоступна для программы. Проверьте подключение и повторите обновление. Сохранённые цены доступны.',
+    'certificate_expired': 'Истёк срок сертификата HTTPS. Проверьте дату и время компьютера. Если они верны, проверьте обновления антивируса и повторите позже. Сохранённые данные доступны.',
+    'certificate_not_yet_valid': 'Сертификат HTTPS ещё не вступил в силу. Проверьте дату и время компьютера. Сохранённые данные доступны.',
+    'certificate_invalid': 'Не удалось проверить сертификат HTTPS. Проверьте обновления Windows и антивируса. Если ошибка остаётся, повторите позже. Сохранённые данные доступны.',
+    'tls_error': 'Не удалось установить защищённое HTTPS-соединение. Повторите позже; если ошибка остаётся, проверьте антивирус. Сохранённые данные доступны.',
+}
+
+
+def network_error_message(error):
+    """Use the same actionable explanation for catalogues, leaflets and PDFs."""
+    return NETWORK_MESSAGES.get(network_error_kind(error), '')
 
 
 def fetch(url):

@@ -313,7 +313,7 @@ function renderFlyers() {
   const list=$('flyer-sources-list');list.replaceChildren();
   for(const s of data.stores) {
     const row=node('div','flyer-source-row');const text=node('div');
-    const status={idle:t("Ещё не проверено"),running:t("Проверяем…"),complete:t("Список проверен"),partial:t("Список новых выпусков недоступен"),error:t("Не удалось обновить")}[s.status];
+    const status={idle:t("Ещё не проверено"),running:t("Проверяем…"),complete:t("Список проверен"),partial:t("Есть замечания"),error:t("Не удалось обновить")}[s.status];
     text.append(node('div',s.status==='complete'?'source-ok':'',status+(s.checked_at?' · '+timeLabel(s.checked_at):'')));
     if(t(s.error))text.append(node('p','source-desc',t(s.error)));
     row.append(externalLink(s.name,s.url,'source-name'),text,externalLink(t("На сайт ↗"),s.url,'flyer-pdf'));list.append(row);

@@ -127,6 +127,8 @@ Official sources: [SPAR](https://www.spar.at/aktionen), [BILLA](https://www.bill
 
 **SPAR limitation recorded on 2 October 2026:** the edition listing returned HTTP 403. Previously discovered Vienna links are retained in `data/flyer-sources.json`. When the listing is unavailable, the app checks known editions and warns that new editions may be missing. It does not invent future links or claim a complete listing refresh. Expired editions are hidden; the official website remains linked in source checks.
 
+Removed editions (HTTP 404/410) are skipped so that other known editions can still be read. If the index is unavailable and no saved link works, the source status explains both conditions. Saved links and bundled fallback links are checked together; this does not guarantee discovery of new editions while SPAR blocks the listing.
+
 ## Data sources
 
 Importers traverse all pages of their available published catalogue. Saved fields include product ID, name, store, quantity, price, previous price, conditions, validity, image, source URL and check time. Prices are stored as integer euro cents for sorting.
@@ -144,6 +146,8 @@ Importers traverse all pages of their available published catalogue. Saved field
 ## Reliability and local operation
 
 The **Python process** needs network access. When internet access is blocked, the browser can still show saved products while updates fail. Allow network access and restart the server, or launch the Windows script normally. The app distinguishes blocked access from an unavailable network, displays the cause and avoids retrying explicitly blocked requests. Transient connection/server failures receive limited retries. Failed attempts do not change saved prices or successful check times.
+
+**Certificate errors are not network permission errors.** The catalogue, leaflet list and PDF reader distinguish expired certificates, certificates not yet valid, other verification failures and TLS connection failures. For a certificate date error, first check the computer's date, time and timezone. If these are correct, check for Windows and antivirus updates and restart the computer. Antivirus HTTPS scanning can supply its own certificates; the error does not by itself identify the retailer as the cause. If it persists, the retailer or certificate issuer may need to fix it. Do not disable HTTPS certificate verification. Previously saved data remains available, subject to leaflet offer expiry.
 
 Retailer requests run locally, avoiding browser CORS restrictions. The server binds to `127.0.0.1`. Updates require a random local session token, SQL queries are parameterised and TLS certificates are verified. Store failures do not erase saved data. Incomplete imports preserve previous products; missing items are hidden only after a complete successful import.
 

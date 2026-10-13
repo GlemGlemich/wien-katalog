@@ -14,7 +14,7 @@ from categories import CATEGORIES as CATALOG_CATEGORIES
 # read leaflet rows in that existing navigation while the catalogue separates it.
 CATEGORIES = [(key,label) for key,label in CATALOG_CATEGORIES if key!='alcohol']
 from flyers import current, script_json, https
-from sources import fetch, STORES
+from sources import fetch, STORES, network_error_message
 from offer_model import DRINKS, matches, drink_kind
 from selections import SELECTIONS, selection_flags
 from offer_pdf import read_pdf, parse_pages
@@ -147,7 +147,7 @@ def import_store(store, connect, stamp, today):
         with connect() as db:
             save(db,store,rows,omitted,stamp)
     except Exception as error:
-        message = str(error)[:350] if isinstance(error,ValueError) else 'Не удалось прочитать PDF магазина. Прежние предложения сохранены до окончания их срока.'
+        message = network_error_message(error) or (str(error)[:350] if isinstance(error,ValueError) else 'Не удалось прочитать PDF магазина. Прежние предложения сохранены до окончания их срока.')
         with connect() as db:
             db.execute("UPDATE offer_imports SET status='error',error=? WHERE store=?",(message,store))
         print(f'{store} leaflet products: {type(error).__name__}: {error}',flush=True)

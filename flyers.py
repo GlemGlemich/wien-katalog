@@ -1,6 +1,7 @@
 """Public weekly leaflets; dates come from the retailer, never from a guessed week."""
 import json
 import re
+import urllib.error
 from datetime import date
 from html import unescape
 from html.parser import HTMLParser
@@ -8,7 +9,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urljoin, urlparse
 
 from parsers import decode_nuxt, _objects
-from sources import fetch
+from sources import fetch, network_error_message
 
 SOURCES = {
     'spar': 'https://www.spar.at/aktionen',
@@ -229,6 +230,7 @@ def read_lidl(today):
 
 def read_spar(today, known):
     warning = ''
+    index_error = None
     try:
         html = fetch(SOURCES['spar'])
         # Only SPAR Wien, excluding EUROSPAR, INTERSPAR and other Bundeslaender.
@@ -236,20 +238,37 @@ def read_spar(today, known):
         urls = list(dict.fromkeys(u.split('?')[0].replace('\\/', '/').rstrip('/') + '/' for u in urls))
         if not urls:
             raise ValueError('Список венских выпусков не найден')
-    except Exception:
+    except Exception as error:
+        index_error = error
         warning = 'Список новых выпусков недоступен. Показаны только ранее найденные флюгблатты; полный список смотрите на сайте магазина.'
         seed = Path(__file__).parent / 'data' / 'flyer-sources.json'
-        urls = known or (json.loads(seed.read_text('utf-8')).get('spar', []) if seed.exists() else [])
+        seeds = json.loads(seed.read_text('utf-8')).get('spar', []) if seed.exists() else []
+        urls = list(dict.fromkeys([*known, *seeds]))
     result = []
+    missing = False
     for url in urls[:20]:
         if not https(url, {'flugblatt.spar.at'}) or not urlparse(url).path.startswith('/wien/spar/'):
             continue
-        html = fetch(url)
+        try:
+            html = fetch(url)
+        except urllib.error.HTTPError as error:
+            # Old editions are removed by the publisher. A dead link must not
+            # prevent checking the remaining editions or hide an index failure.
+            if error.code not in (404, 410):
+                raise
+            missing = True
+            continue
         doc = Document(html)
         data = script_json(html, 'window.staticSettings =')
         dates = date_range(data.get('pageTitleUndecorated') or doc.meta('og:title'), today)
         result.append(item('spar', url, dates, image=https(doc.meta('og:image')),
                            pages=len(data.get('pages', [])) or None))
+    if not result and index_error:
+        if network_error_message(index_error):
+            raise index_error
+        raise ValueError('SPAR: список новых выпусков недоступен, а сохранённые ссылки не дали доступных буклетов. Откройте актуальные акции на сайте SPAR.') from index_error
+    if missing and not warning:
+        warning = 'Часть ссылок на буклеты больше не работает. Показаны доступные выпуски; полный список смотрите на сайте магазина.'
     return result, warning
 
 

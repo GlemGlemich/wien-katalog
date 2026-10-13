@@ -20,7 +20,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from parsers import _vienna_date
-from sources import STORES, pages, network_error_kind
+from sources import STORES, pages, network_error_message
 from categories import CATEGORIES, CATEGORY_VERSION, classify
 from selections import SELECTIONS, SELECTION_VERSION, FACETS, selection_flags, product_details
 from quantities import QUANTITY_VERSION, product_quantity, size_label
@@ -224,10 +224,8 @@ def import_store(store):
     except Exception as error:
         if isinstance(error, urllib.error.HTTPError):
             message = f'Сайт магазина ответил HTTP {error.code}. Сохранённые цены остаются доступны.'
-        elif network_error_kind(error) == 'access_denied':
-            message = 'Система запретила программе доступ к интернету. Разрешите сетевой доступ и перезапустите каталог. Сохранённые цены доступны.'
-        elif network_error_kind(error) == 'unreachable':
-            message = 'Сеть недоступна для программы. Проверьте подключение и повторите обновление. Сохранённые цены доступны.'
+        elif network_error_message(error):
+            message = network_error_message(error)
         elif isinstance(error, (urllib.error.URLError, TimeoutError, OSError)):
             message = 'Не удалось соединиться с магазином. Проверьте интернет и повторите обновление.'
         elif isinstance(error, ValueError):
@@ -438,6 +436,8 @@ def import_flyers(store):
     except Exception as error:
         if isinstance(error, urllib.error.HTTPError):
             message = f'Сайт магазина недоступен для чтения (HTTP {error.code}). Попробуйте позже или откройте его напрямую.'
+        elif network_error_message(error):
+            message = network_error_message(error)
         elif isinstance(error, ValueError):
             message = str(error)[:350]
         else:

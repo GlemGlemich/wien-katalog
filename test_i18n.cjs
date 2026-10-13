@@ -84,3 +84,13 @@ test('every static and scripted UI phrase has an English translation', () => {
   const missing = [...phrases].filter(key => !app.evaluate(`Object.hasOwn(english, ${JSON.stringify(key)})`));
   assert.deepEqual(missing, []);
 });
+
+test('network error explanations have English translations', () => {
+  const app = browser('en');
+  const source = fs.readFileSync(path.join(__dirname, 'sources.py'), 'utf8');
+  const messages = source.match(/NETWORK_MESSAGES = \{([\s\S]*?)\n\}/)[1];
+  for (const [, phrase] of messages.matchAll(/'\w+': '([^']+)'/g)) {
+    const translated = app.evaluate(`t(${JSON.stringify(phrase)})`);
+    assert.doesNotMatch(translated, /[А-Яа-яЁё]/, phrase);
+  }
+});

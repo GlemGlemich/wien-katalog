@@ -1,6 +1,8 @@
 """Offline checks: printed offer dates and preserving saved leaflets on failures."""
 import tempfile
 import unittest
+import urllib.error
+import ssl
 from pathlib import Path
 from unittest.mock import patch
 
@@ -9,6 +11,48 @@ import flyers
 
 
 class FlyerParsingTests(unittest.TestCase):
+    def test_spar_removed_edition_does_not_block_available_edition(self):
+        old = 'https://flugblatt.spar.at/wien/spar/removed/'
+        live = 'https://flugblatt.spar.at/wien/spar/available/'
+        index = f'<a href="{old}">Old</a><a href="{live}">Current</a>'
+        edition = '<script>window.staticSettings = {"pageTitleUndecorated":"08.10.26 - 21.10.26", "pages":[1,2]}</script>'
+        for status in (404, 410):
+            with self.subTest(status=status), patch.object(flyers, 'fetch', side_effect=[
+                    index, urllib.error.HTTPError(old, status, 'Removed', {}, None), edition]):
+                rows, warning = flyers.read_spar('2026-10-13', [])
+            self.assertEqual([row['url'] for row in rows], [live])
+            self.assertTrue(warning)
+            self.assertEqual(rows[0]['valid_to'], '2026-10-21')
+
+    def test_spar_fallback_combines_known_and_seed_links(self):
+        old = 'https://flugblatt.spar.at/wien/spar/old/'
+        live = 'https://flugblatt.spar.at/wien/spar/new/'
+        edition = '<script>window.staticSettings = {"pageTitleUndecorated":"08.10.26 - 21.10.26"}</script>'
+        with patch.object(flyers.Path, 'read_text', return_value='{"spar":["' + live + '"]}'), \
+             patch.object(flyers.Path, 'exists', return_value=True), \
+             patch.object(flyers, 'fetch', side_effect=[
+                 urllib.error.HTTPError(flyers.SOURCES['spar'], 403, 'Forbidden', {}, None),
+                 urllib.error.HTTPError(old, 404, 'Removed', {}, None), edition]) as fetch:
+            rows, warning = flyers.read_spar('2026-10-13', [old])
+        self.assertEqual([c.args[0] for c in fetch.call_args_list], [flyers.SOURCES['spar'], old, live])
+        self.assertEqual(rows[0]['url'], live)
+        self.assertIn('Список новых выпусков недоступен', warning)
+
+    def test_spar_dead_fallback_explains_unavailable_index(self):
+        with patch.object(flyers.Path, 'exists', return_value=False), \
+             patch.object(flyers, 'fetch', side_effect=[
+                 urllib.error.HTTPError(flyers.SOURCES['spar'], 403, 'Forbidden', {}, None),
+                 urllib.error.HTTPError('https://flugblatt.spar.at/wien/spar/old/', 404, 'Removed', {}, None)]):
+            with self.assertRaisesRegex(ValueError, 'SPAR: список новых выпусков недоступен'):
+                flyers.read_spar('2026-10-13', ['https://flugblatt.spar.at/wien/spar/old/'])
+
+    def test_spar_preserves_certificate_cause_when_fallback_is_missing(self):
+        error = urllib.error.URLError(ssl.SSLCertVerificationError(1, 'Certificate expired'))
+        with patch.object(flyers.Path, 'exists', return_value=False), patch.object(flyers, 'fetch', side_effect=error):
+            with self.assertRaises(urllib.error.URLError) as raised:
+                flyers.read_spar('2026-10-13', [])
+        self.assertIs(raised.exception, error)
+
     def test_printed_dates_years_and_footnotes(self):
         cases = [
             ('VON DONNERSTAG, 1. 10. BIS MITTWOCH, 7. 10. 20261)', ('2026-10-01', '2026-10-07')),
