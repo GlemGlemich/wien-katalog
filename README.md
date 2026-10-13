@@ -11,7 +11,7 @@ python -m pip install -r requirements.txt
 python app.py --open
 ```
 
-On Windows, you can also double-click **`Запустить каталог.cmd`** (the catalogue launcher). It uses the bundled Codex Python runtime when available, otherwise the `python` command. Keep the server window open. The app runs at [http://127.0.0.1:8765](http://127.0.0.1:8765).
+On Windows, you can also double-click **`Запустить каталог.cmd`** (the catalogue launcher). It uses the bundled Codex Python runtime when available, otherwise the `python` command. Keep the server window open. The app runs at [http://127.0.0.1:8765](http://127.0.0.1:8765). The launcher is checked out with Windows CRLF line endings so Command Prompt reads it correctly. To restart it later, close its Command Prompt window or press Ctrl+C there, then double-click the launcher again.
 
 Click **Download prices** to read all five sources. Selecting a store limits the update to that store. Downloads take several minutes; products appear as they arrive and are saved in `data/catalog.sqlite3` between sessions. Internet access is needed for new prices and images. Saved names and prices remain available offline and without the PDF extraction dependency.
 

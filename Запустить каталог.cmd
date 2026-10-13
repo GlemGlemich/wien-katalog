@@ -1,4 +1,5 @@
 @echo off
+rem Keep this batch file in CRLF for cmd.exe.
 chcp 65001 >nul
 cd /d "%~dp0"
 set "BUNDLED_PYTHON=%USERPROFILE%\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
